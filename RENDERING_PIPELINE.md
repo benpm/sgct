@@ -13,8 +13,9 @@ The SGCT rendering pipeline is a multi-stage process that handles various render
 | **PreSync** | None | None | Data synchronization |
 | **PostSyncPreDraw** | None | None | Post-sync setup |
 | **Draw (Cubemap)** | `_cubeMapFbo` | `cubeMapColor`, `cubeMapDepth` | Non-linear projection rendering |
-| **Draw (Viewport)** | `_finalFBO` | `leftEye`/`rightEye`, `depth`, `normals`, `positions` | Main 3D scene rendering |
-| **Draw2D** | `_finalFBO` | Same as Draw | 2D overlays, HUD, text |
+| **Draw (Viewport)** | `_finalFBO` | `leftEye`/`rightEye` (or `intermediate` with FXAA), `depth`, `normals`, `positions` | Main 3D scene rendering |
+| **[Post-Processing]** | `_finalFBO` | MSAA blit → textures, FXAA reads `intermediate` writes `leftEye`/`rightEye` | Anti-aliasing effects |
+| **Draw2D** | `_finalFBO` | Same as Draw (after post-processing) | 2D overlays, HUD, text |
 | **PostDraw** | None (back buffer) | None | Pre-swap operations |
 | **Cleanup** | None | None | Resource cleanup |
 
@@ -298,6 +299,102 @@ flowchart TD
 - **Purpose**: Clean up resources before shutdown
 - **Notes**: Last callback before SGCT destroys OpenGL contexts
 
+## Post-Processing Effects
+
+Post-processing in SGCT happens between the Draw callback and the Draw2D callback. This section details how MSAA (Multi-Sample Anti-Aliasing) and FXAA (Fast Approximate Anti-Aliasing) are executed, including the FBO states and texture usage.
+
+### MSAA (Multi-Sample Anti-Aliasing) Resolution
+
+When MSAA is enabled (`nAASamples > 1`), the rendering pipeline changes significantly:
+
+#### FBO State During Draw Callback (with MSAA):
+- **FBO Bound**: `_finalFBO` (configured as multisampled)
+- **Attachments**: Multisampled renderbuffers (not textures)
+  - Color renderbuffer (MSAA samples)
+  - Depth renderbuffer (MSAA samples) if `useDepthTexture` enabled
+  - Normal renderbuffer (MSAA samples) if `useNormalTexture` enabled
+  - Position renderbuffer (MSAA samples) if `usePositionTexture` enabled
+- **Purpose**: Renders scene with multiple samples per pixel for high-quality anti-aliasing
+
+#### MSAA Blit Operation (after Draw, before FXAA/Draw2D):
+- **Operation**: `glBlitFramebuffer` from MSAA renderbuffers to non-MSAA textures
+- **Source FBO**: `_finalFBO` read buffer (multisampled renderbuffers)
+- **Destination FBO**: `_finalFBO` draw buffer (non-multisampled textures)
+- **Textures Written** (destination attachments):
+  - `GL_COLOR_ATTACHMENT0`: `leftEye` or `rightEye` texture (or `intermediate` if FXAA enabled)
+  - Depth attachment: `depth` texture (if `useDepthTexture` enabled)
+  - `GL_COLOR_ATTACHMENT1`: `normals` texture (if `useNormalTexture` enabled)
+  - `GL_COLOR_ATTACHMENT2`: `positions` texture (if `usePositionTexture` enabled)
+- **Blit Mode**: `GL_COLOR_BUFFER_BIT` with `GL_LINEAR` filter
+- **Code Location**: `Window::renderViewports()` lines 1685-1713
+- **Effect**: Resolves MSAA samples into final per-pixel color values
+
+### FXAA (Fast Approximate Anti-Aliasing)
+
+FXAA is a post-process shader-based anti-aliasing technique that runs after MSAA resolution (or directly after drawing if MSAA is disabled).
+
+#### FBO State During FXAA:
+- **FBO Bound**: `_finalFBO` (non-multisampled)
+- **Shader**: FXAA shader program
+- **Input Texture** (read from):
+  - `GL_TEXTURE0`: `intermediate` texture
+  - Contains the rendered scene before FXAA processing
+- **Output Attachment** (write to):
+  - `GL_COLOR_ATTACHMENT0`: `leftEye` or `rightEye` texture
+- **Code Location**: `Window::renderViewports()` lines 1716-1741
+
+#### FXAA Process:
+1. **Bind FBO**: `_finalFBO->bind()`
+2. **Attach Output**: Attach `leftEye`/`rightEye` texture to `GL_COLOR_ATTACHMENT0`
+3. **Clear**: `glClear(GL_COLOR_BUFFER_BIT)` to prepare for FXAA output
+4. **Bind Input**: Bind `intermediate` texture to `GL_TEXTURE0`
+5. **Configure Shader**: Set FXAA parameters
+   - `sizeX`, `sizeY`: Framebuffer dimensions for texel size calculations
+   - `FXAA_SUBPIX_TRIM`: 0.25 (controls sub-pixel aliasing)
+   - `FXAA_SUBPIX_OFFSET`: 0.5 (sub-pixel offset)
+6. **Render**: Full-screen quad renders the FXAA-processed image
+7. **Result**: Anti-aliased image written to `leftEye`/`rightEye` texture
+
+### Texture Flow Summary
+
+#### Without FXAA:
+```
+Draw Callback → leftEye/rightEye texture (or MSAA renderbuffer)
+                     ↓
+              [MSAA Blit if enabled]
+                     ↓
+              leftEye/rightEye texture → Draw2D Callback
+```
+
+#### With FXAA:
+```
+Draw Callback → intermediate texture (or MSAA renderbuffer)
+                     ↓
+              [MSAA Blit if enabled]
+                     ↓
+              intermediate texture
+                     ↓
+              FXAA Shader (reads intermediate, writes leftEye/rightEye)
+                     ↓
+              leftEye/rightEye texture → Draw2D Callback
+```
+
+### Post-Processing Timing
+
+Post-processing occurs in the following order:
+1. **After Draw Callback**: All 3D scene rendering is complete
+2. **MSAA Blit** (if MSAA enabled): ~line 1685-1713 in `Window::renderViewports()`
+3. **FXAA** (if FXAA enabled): ~line 1716-1741 in `Window::renderViewports()`
+4. **Before Draw2D Callback**: Final color texture ready for 2D overlays
+
+### Important Notes on Post-Processing
+
+1. **MSAA + FXAA**: Both can be enabled simultaneously. MSAA resolves first, then FXAA applies edge detection
+2. **Performance**: MSAA is more expensive during rendering; FXAA adds a full-screen shader pass
+3. **Stereo Rendering**: Post-processing is applied separately to each eye (left and right)
+4. **Intermediate Texture**: Only allocated when FXAA is enabled
+5. **Side-by-Side/Top-Bottom Stereo**: Post-processing is deferred until after both eyes are rendered
+
 ## Key Framebuffer Objects
 
 ### Window Level FBOs:
@@ -338,9 +435,9 @@ flowchart TD
    - Bind `_finalFBO`
    - Render each viewport
    - Call Draw callback once per viewport
-4. **Post-processing**:
-   - MSAA resolve (blit)
-   - FXAA (if enabled)
+4. **Post-processing** (see [Post-Processing Effects](#post-processing-effects) for details):
+   - MSAA resolve (blit from multisampled renderbuffers to textures)
+   - FXAA (shader-based anti-aliasing from intermediate to final texture)
 5. **2D Rendering**:
    - Still in `_finalFBO`
    - Render overlays, statistics
@@ -373,7 +470,8 @@ flowchart TD
 
 1. **Context Switching**: The shared context is made current between window rendering operations
 2. **Texture Attachment**: Textures are dynamically attached to FBOs based on settings
-3. **MSAA Handling**: If MSAA is enabled, an additional blit step resolves the multisampled buffer
-4. **Viewport Independence**: Each viewport maintains its own projection and can be rendered independently
-5. **Cluster Synchronization**: Frame locks ensure all nodes render in sync
-6. **Screenshot Timing**: Screenshots are captured from the back buffer after swap but before the frame completes
+3. **MSAA Handling**: If MSAA is enabled, an additional blit step resolves the multisampled buffer (see [Post-Processing Effects](#post-processing-effects))
+4. **FXAA Processing**: If FXAA is enabled, a shader pass applies fast anti-aliasing (see [Post-Processing Effects](#post-processing-effects))
+5. **Viewport Independence**: Each viewport maintains its own projection and can be rendered independently
+6. **Cluster Synchronization**: Frame locks ensure all nodes render in sync
+7. **Screenshot Timing**: Screenshots are captured from the back buffer after swap but before the frame completes
