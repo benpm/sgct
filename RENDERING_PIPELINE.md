@@ -6,6 +6,18 @@ This document describes the rendering pipeline in SGCT (Simple Graphics Cluster 
 
 The SGCT rendering pipeline is a multi-stage process that handles various rendering modes including mono, stereo, and non-linear projections (fisheye, cylindrical, etc.). The pipeline manages multiple framebuffers and textures to support these different modes.
 
+## Quick Reference: Callback FBO States
+
+| Callback | FBO Bound | Key Textures Attached | Purpose |
+|----------|-----------|----------------------|---------|
+| **PreSync** | None | None | Data synchronization |
+| **PostSyncPreDraw** | None | None | Post-sync setup |
+| **Draw (Cubemap)** | `_cubeMapFbo` | `cubeMapColor`, `cubeMapDepth` | Non-linear projection rendering |
+| **Draw (Viewport)** | `_finalFBO` | `leftEye`/`rightEye`, `depth`, `normals`, `positions` | Main 3D scene rendering |
+| **Draw2D** | `_finalFBO` | Same as Draw | 2D overlays, HUD, text |
+| **PostDraw** | None (back buffer) | None | Pre-swap operations |
+| **Cleanup** | None | None | Resource cleanup |
+
 ## Mermaid Diagram
 
 ```mermaid
