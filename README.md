@@ -22,6 +22,7 @@ Please note that in this nomenclature, even if an application is running only on
 1. [Getting started](https://sgct.github.io/getting-started.html)
 1. [Configuration files](https://sgct.github.io/configuration-files.html)
 1. [Error codes](https://sgct.github.io/errors.html)
+1. [Rendering Pipeline](RENDERING_PIPELINE.md) - Detailed documentation of the rendering pipeline with framebuffer and texture states
 1. [Doxygen-generated documentation](http://webstaff.itn.liu.se/~alebo68/sgct/doxygen/html/)
 
 # Tutorials
