@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cmake --preset:*)",
+      "Bash(git submodule update:*)",
+      "Bash(cmake --build:*)",
+      "Bash(./simplecube.exe:*)",
+      "Bash(ctest:*)",
+      "Bash(ldd:*)",
+      "Bash(echo:*)",
+      "Bash(timeout:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "windows-vs2022-debug",
+      "displayName": "Windows Visual Studio 2022 Debug",
+      "description": "Debug build using Visual Studio 2022 generator with examples and tests",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build/windows-vs2022-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "SGCT_EXAMPLES": "ON",
+        "SGCT_BUILD_TESTS": "ON",
+        "BUILD_SHARED_LIBS": "OFF",
+        "SGCT_SPOUT_SUPPORT": "OFF",
+        "SGCT_NDI_SUPPORT": "OFF",
+        "SGCT_DEP_INCLUDE_SCALABLE": "OFF"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-vs2022-debug",
+      "displayName": "Build Windows VS2022 Debug",
+      "configurePreset": "windows-vs2022-debug",
+      "configuration": "Debug"
+    }
+  ]
+}
