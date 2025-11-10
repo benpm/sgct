@@ -6,6 +6,7 @@
   "dependencies" : 
   [
     "catch2",
+    "freetype",
     "fmt",
     "glfw3",
     "glm",

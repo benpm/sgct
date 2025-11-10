@@ -8,6 +8,8 @@
 
 #include "box.h"
 
+#include <sgct/sgct.h>
+#include <sgct/user.h>
 #include <sgct/opengl.h>
 #include <array>
 

@@ -8,3 +8,4 @@ build-vs2017/
 support/config-converter/node_modules
 doc
 bin/*
+vcpkg_installed
