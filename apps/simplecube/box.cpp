@@ -13,7 +13,7 @@
 #include <sgct/opengl.h>
 #include <array>
 
-Box::Box(float size) {
+Box::Box(float size, const glm::vec3& position) : _position(position) {
     struct VertexData {
         float x = 0.f;
         float y = 0.f;

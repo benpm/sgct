@@ -12,9 +12,11 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <memory>
+#include <string_view>
+#include <vector>
 
 namespace {
-    std::unique_ptr<Box> box;
+    std::vector<std::unique_ptr<Box>> boxes;
     GLint matrixLoc = -1;
     double currentTime = 0.0;
 
@@ -45,7 +47,26 @@ namespace {
 using namespace sgct;
 
 void initOGL(GLFWwindow*) {
-    box = std::make_unique<Box>(2.f);
+    // Create a 4x4x4 grid of boxes around the origin
+    constexpr int n = 8;
+    constexpr float boxSize = 0.8f;
+    constexpr float sep = 3.0f;
+
+    for (int x = -n/2; x < n/2; x++) {
+        for (int y = -n/2; y < n/2; y++) {
+            for (int z = -n/2; z < n/2; z++) {
+                if (x == 0 && y == 0 && z == 0) {
+                    continue; // Skip the center box
+                }
+                glm::vec3 position = glm::vec3(
+                    x * sep,
+                    y * sep,
+                    z * sep
+                );
+                boxes.push_back(std::make_unique<Box>(boxSize, position));
+            }
+        }
+    }
 
     // Set up backface culling
     glCullFace(GL_BACK);
@@ -64,8 +85,8 @@ void draw(const RenderData& data) {
 
     constexpr double Speed = 0.5;
 
-    // Create scene transform (animation)
-    glm::mat4 scene = glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, -5.f));
+    // Create base scene transform (animation and camera position)
+    glm::mat4 scene = glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, -15.f));
     scene = glm::rotate(
         scene,
         static_cast<float>(currentTime * Speed),
@@ -77,12 +98,18 @@ void draw(const RenderData& data) {
         glm::vec3(1.f, 0.f, 0.f)
     );
 
-    const glm::mat4 mvp =
-        glm::make_mat4(data.modelViewProjectionMatrix.values.data()) * scene;
-
     ShaderManager::instance().shaderProgram("xform").bind();
-    glUniformMatrix4fv(matrixLoc, 1, GL_FALSE, glm::value_ptr(mvp));
-    box->draw();
+
+    // Draw each box at its position
+    for (const auto& box : boxes) {
+        glm::mat4 boxTransform = glm::translate(scene, box->position());
+        const glm::mat4 mvp =
+            glm::make_mat4(data.modelViewProjectionMatrix.values.data()) * boxTransform;
+
+        glUniformMatrix4fv(matrixLoc, 1, GL_FALSE, glm::value_ptr(mvp));
+        box->draw();
+    }
+
     ShaderManager::instance().shaderProgram("xform").unbind();
 
     glDisable(GL_CULL_FACE);
@@ -107,7 +134,7 @@ void decode(const std::vector<std::byte>& data) {
 }
 
 void cleanup() {
-    box = nullptr;
+    boxes.clear();
 }
 
 void keyboard(Key key, Modifier, Action action, int, Window*) {

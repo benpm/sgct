@@ -28,6 +28,9 @@
       "name": "debug",
       "displayName": "Build Windows VS2022 Debug",
       "configurePreset": "debug",
+      "targets": [
+        "sgct", "simplecube"
+      ],
       "configuration": "Debug"
     }
   ]

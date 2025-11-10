@@ -9,6 +9,8 @@
 #ifndef __SGCT__BOX__H__
 #define __SGCT__BOX__H__
 
+#include <glm/glm.hpp>
+
 /**
  * This class creates and renders a simple colored cube.
  */
@@ -17,7 +19,7 @@ public:
     /**
      * This constructor requires a valid OpenGL context.
      */
-    Box(float size);
+    Box(float size, const glm::vec3& position);
 
     /**
      * The destructor requires a valid OpenGL context.
@@ -26,9 +28,12 @@ public:
 
      void draw() const;
 
+     glm::vec3 position() const { return _position; }
+
 private:
     unsigned int _vao = 0;
     unsigned int _vbo = 0;
+    glm::vec3 _position;
 };
 
 #endif // __SGCT__BOX__H__
