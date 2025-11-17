@@ -9,7 +9,7 @@
         {
           "fxaa": true,
           "fullscreen": false,
-          "stereo": "none",
+          "stereo": "side_by_side",
           "size": { "x": 512, "y": 512 },
           "viewports": [
             {
