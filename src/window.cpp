@@ -1458,13 +1458,13 @@ void Window::createTextures() {
     if (Engine::instance().settings().useDepthTexture) {
         generateTexture(_frameBufferTextures.depth, TextureType::Depth);
     }
-    if (_useFXAA) {
+    if (_useFXAA || Engine::instance().postProcessFunction()) {
         generateTexture(_frameBufferTextures.intermediate, TextureType::Color);
         glObjectLabel(
             GL_TEXTURE,
             _frameBufferTextures.intermediate,
             -1,
-            std::format("Window{}_FXAA_Intermediate", _id).c_str()
+            std::format("Window{}_PostProcess_Intermediate", _id).c_str()
         );
     }
     if (Engine::instance().settings().useNormalTexture) {
@@ -1719,7 +1719,45 @@ void Window::renderViewports(FrustumMode frustum, Eye eye) const {
         }
 
 
+        // Post-processing pass
+        auto postProcessFn = Engine::instance().postProcessFunction();
+        if (postProcessFn) {
+            glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, "Post-Process");
+
+            // Copy the current eye render target into the intermediate texture
+            _finalFBO->bind();
+            _finalFBO->attachColorTexture(frameBufferTextureEye(eye), GL_COLOR_ATTACHMENT0);
+            glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, _frameBufferTextures.intermediate);
+
+            const ivec2 framebufferSize = framebufferResolution();
+            glCopyTexSubImage2D(
+                GL_TEXTURE_2D,
+                0,              // level
+                0, 0,           // xoffset, yoffset
+                0, 0,           // x, y from framebuffer
+                framebufferSize.x,
+                framebufferSize.y
+            );
+
+            glDrawBuffer(GL_COLOR_ATTACHMENT0);
+            // bind target FBO
+            _finalFBO->attachColorTexture(
+                frameBufferTextureEye(eye),
+                GL_COLOR_ATTACHMENT0
+            );
+
+            glViewport(0, 0, framebufferSize.x, framebufferSize.y);
+
+            // Call the user-provided post-process callback
+            postProcessFn(*this, frustum, _frameBufferTextures.intermediate, framebufferSize);
+
+            glPopDebugGroup();
+        }
         if (_useFXAA) {
+            // Fallback to hardcoded FXAA if no custom post-process callback is provided
             assert(_fxaa);
             glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, "FXAA Post-Process");
 
@@ -1760,6 +1798,8 @@ void Window::renderViewports(FrustumMode frustum, Eye eye) const {
 
             renderScreenQuad();
             ShaderProgram::unbind();
+
+            glPopDebugGroup();
         }
 
         render2D(frustum);

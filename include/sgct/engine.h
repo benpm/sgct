@@ -201,6 +201,12 @@ public:
         /// swap.
         void (*postDraw)() = nullptr;
 
+        /// This function is called to apply post-processing effects to the rendered frame.
+        /// It receives the window being rendered, the frustum mode (eye), an input texture
+        /// containing the rendered frame, and the framebuffer size. The callback should
+        /// render the processed result back to the currently bound framebuffer.
+        void (*postProcess)(const Window&, FrustumMode, unsigned int, ivec2) = nullptr;
+
         /// This is called before all SGCT components will be destroyed. The same shared
         /// context is active that was passed in the Callbacks::initOpenGL callback
         void (*cleanup)() = nullptr;
@@ -438,6 +444,13 @@ public:
 
     Engine::DrawFunction draw2DFunction() const;
 
+    /**
+     * Returns the post-process callback function if one has been registered.
+     *
+     * \return The post-process function pointer, or nullptr if none was registered
+     */
+    void (*postProcessFunction() const)(const Window&, FrustumMode, unsigned int, ivec2);
+
 
     /**
      * Returns a reference to the node that represents this computer.
@@ -578,6 +591,9 @@ private:
 
     /// Function pointer that is called after all rendering has finished
     void (*_postDrawFn)() = nullptr;
+
+    /// Function pointer that is called for post-processing effects
+    void (*_postProcessFn)(const Window&, FrustumMode, unsigned int, ivec2) = nullptr;
 
     /// Function pointer that is called when the Engine is being destroyed
     void (*_cleanupFn)() = nullptr;

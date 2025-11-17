@@ -47,6 +47,33 @@ namespace {
 
   void main() { color = vec4(fragColor, 1.0); }
 )";
+
+    constexpr std::string_view PostProcessVertexShader = R"(
+  #version 330 core
+  
+  layout (location = 0) in vec3 in_position;
+  layout (location = 1) in vec2 in_texCoords;
+
+  out vec2 uv;
+
+  void main() {
+    gl_Position = vec4(in_position, 1.0);
+    uv = in_texCoords;
+  })";
+
+    constexpr std::string_view PostProcessFragmentShader = R"(
+  #version 330 core
+
+  uniform sampler2D tex;
+  in vec2 uv;
+  out vec4 color;
+
+  void main() {
+    vec4 originalColor = texture(tex, uv);
+    color = vec4(1.0 - originalColor.rgb, 1.0);
+  })";
+
+    GLint postProcessTexLoc = -1;
 } // namespace
 
 using namespace sgct;
@@ -82,6 +109,18 @@ void initOGL(GLFWwindow* win) {
     prg.bind();
     matrixLoc = glGetUniformLocation(prg.id(), "mvp");
     prg.unbind();
+
+    // Initialize post-process shader
+    ShaderManager::instance().addShaderProgram(
+        "postprocess",
+        PostProcessVertexShader,
+        PostProcessFragmentShader
+    );
+    const ShaderProgram& ppPrg = ShaderManager::instance().shaderProgram("postprocess");
+    ppPrg.bind();
+    postProcessTexLoc = glGetUniformLocation(ppPrg.id(), "tex");
+    glUniform1i(postProcessTexLoc, 0); // Texture unit 0
+    ppPrg.unbind();
 }
 
 void draw(const RenderData& data) {
@@ -142,6 +181,22 @@ void decode(const std::vector<std::byte>& data) {
     deserializeObject(data, pos, currentTime);
 }
 
+void postProcess(const Window& window, FrustumMode, unsigned int inputTexture, ivec2) {
+    // Bind the input texture containing the rendered frame
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, inputTexture);
+
+    // Use the post-process shader
+    const ShaderProgram& ppPrg = ShaderManager::instance().shaderProgram("postprocess");
+    ppPrg.bind();
+
+    // Render a full-screen quad
+    window.renderScreenQuad();
+
+    // Unbind shader
+    ppPrg.unbind();
+}
+
 void cleanup() {
     boxes.clear();
 }
@@ -170,6 +225,7 @@ int main(int argc, char** argv) {
     callbacks.cleanup = cleanup;
     callbacks.keyboard = keyboard;
     callbacks.postDraw = postDraw;
+    callbacks.postProcess = postProcess;
 
     try {
         Engine::create(cluster, callbacks, config);

@@ -11,7 +11,7 @@
             "program": "${workspaceRoot}/bin/Debug/simplecube.exe",
             "args": [
                 "--config",
-                "config/single_fxaa.json"
+                "config/single_fisheye_fxaa.json"
             ],
             "stopAtEntry": false,
             "cwd": "${workspaceRoot}",

@@ -234,6 +234,7 @@ Engine::Engine(config::Cluster cluster, Callbacks callbacks, const Configuration
     , _drawFn(std::move(callbacks.draw))
     , _draw2DFn(std::move(callbacks.draw2D))
     , _postDrawFn(std::move(callbacks.postDraw))
+    , _postProcessFn(std::move(callbacks.postProcess))
     , _cleanupFn(std::move(callbacks.cleanup))
     , _settings(createSettings(cluster, config))
 {
@@ -1097,6 +1098,10 @@ Engine::DrawFunction Engine::drawFunction() const {
 
 Engine::DrawFunction Engine::draw2DFunction() const {
     return _draw2DFn;
+}
+
+void (*Engine::postProcessFunction() const)(const Window&, FrustumMode, unsigned int, ivec2) {
+    return _postProcessFn;
 }
 
 const Node& Engine::thisNode() const {
