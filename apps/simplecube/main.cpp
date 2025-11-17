@@ -9,6 +9,11 @@
 #include "box.h"
 #include <sgct/sgct.h>
 #include <sgct/opengl.h>
+#include <sgct/projection/fisheye.h>
+#include <sgct/projection/nonlinearprojection.h>
+#include <sgct/user.h>
+#include <sgct/shadermanager.h>
+#include <sgct/engine.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <memory>
@@ -46,7 +51,7 @@ namespace {
 
 using namespace sgct;
 
-void initOGL(GLFWwindow*) {
+void initOGL(GLFWwindow* win) {
     // Create a 4x4x4 grid of boxes around the origin
     constexpr int n = 8;
     constexpr float boxSize = 0.8f;
@@ -116,6 +121,10 @@ void draw(const RenderData& data) {
     glDisable(GL_DEPTH_TEST);
 }
 
+void postDraw() {
+    
+}
+
 void preSync() {
     if (Engine::instance().isMaster()) {
         currentTime = time();
@@ -146,6 +155,7 @@ void keyboard(Key key, Modifier, Action action, int, Window*) {
 int main(int argc, char** argv) {
     std::vector<std::string> arg(argv + 1, argv + argc);
     Configuration config = parseArguments(arg);
+
     config::Cluster cluster = loadCluster(config.configFilename);
     if (!cluster.success) {
         return -1;
@@ -159,6 +169,7 @@ int main(int argc, char** argv) {
     callbacks.draw = draw;
     callbacks.cleanup = cleanup;
     callbacks.keyboard = keyboard;
+    callbacks.postDraw = postDraw;
 
     try {
         Engine::create(cluster, callbacks, config);

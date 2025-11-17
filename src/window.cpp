@@ -1460,6 +1460,12 @@ void Window::createTextures() {
     }
     if (_useFXAA) {
         generateTexture(_frameBufferTextures.intermediate, TextureType::Color);
+        glObjectLabel(
+            GL_TEXTURE,
+            _frameBufferTextures.intermediate,
+            -1,
+            std::format("Window{}_FXAA_Intermediate", _id).c_str()
+        );
     }
     if (Engine::instance().settings().useNormalTexture) {
         generateTexture(_frameBufferTextures.normals, TextureType::Normal);
@@ -1715,6 +1721,25 @@ void Window::renderViewports(FrustumMode frustum, Eye eye) const {
 
         if (_useFXAA) {
             assert(_fxaa);
+            glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, -1, "FXAA Post-Process");
+
+            // Copy the current eye render target into the intermediate texture for FXAA
+            _finalFBO->bind();
+            _finalFBO->attachColorTexture(frameBufferTextureEye(eye), GL_COLOR_ATTACHMENT0);
+            glReadBuffer(GL_COLOR_ATTACHMENT0);
+
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, _frameBufferTextures.intermediate);
+
+            const ivec2 framebufferSize = framebufferResolution();
+            glCopyTexSubImage2D(
+                GL_TEXTURE_2D,
+                0,              // level
+                0, 0,           // xoffset, yoffset
+                0, 0,           // x, y from framebuffer
+                framebufferSize.x,
+                framebufferSize.y
+            );
 
             glDrawBuffer(GL_COLOR_ATTACHMENT0);
             // bind target FBO
@@ -1723,10 +1748,7 @@ void Window::renderViewports(FrustumMode frustum, Eye eye) const {
                 GL_COLOR_ATTACHMENT0
             );
 
-            const ivec2 framebufferSize = framebufferResolution();
             glViewport(0, 0, framebufferSize.x, framebufferSize.y);
-            glClearColor(0.f, 0.f, 0.f, 0.f);
-            glClear(GL_COLOR_BUFFER_BIT);
 
             glActiveTexture(GL_TEXTURE0);
 

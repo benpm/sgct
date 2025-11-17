@@ -8,9 +8,9 @@
   "configurePresets": [
     {
       "name": "debug",
-      "displayName": "Windows Visual Studio 2022 Debug",
-      "description": "Debug build using Visual Studio 2022 generator with examples and tests",
-      "generator": "Visual Studio 17 2022",
+      "displayName": "Windows Visual Studio 2026 Debug",
+      "description": "Debug build using Visual Studio 2026 generator with examples and tests",
+      "generator": "Visual Studio 18 2026",
       "binaryDir": "${sourceDir}/build/debug",
       "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
@@ -26,7 +26,7 @@
   "buildPresets": [
     {
       "name": "debug",
-      "displayName": "Build Windows VS2022 Debug",
+      "displayName": "Build Windows VS2026 Debug",
       "configurePreset": "debug",
       "targets": [
         "sgct", "simplecube"

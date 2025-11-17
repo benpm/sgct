@@ -13,38 +13,12 @@ SGCT uses CMake (minimum version 3.25).
 ### Basic Build Commands
 
 ```bash
-# Configure (creates build directory)
-cmake -B build -S .
+# Configure (creates build/Debug directory)
+cmake --preset debug
 
-# Build the library
-cmake --build build
-
-# Build with examples enabled
-cmake -B build -S . -DSGCT_EXAMPLES=ON
-cmake --build build
-
-# Build with tests
-cmake -B build -S . -DSGCT_BUILD_TESTS=ON
-cmake --build build
-
-# Run tests
-cd build
-ctest
-# Or run the test executable directly:
-./SGCTTest
+# Build
+cmake --build --preset debug
 ```
-
-### Key CMake Options
-
-- `SGCT_EXAMPLES` - Build example applications in `apps/` (default: OFF)
-- `SGCT_BUILD_TESTS` - Build test suite (default: ON)
-- `SGCT_FREETYPE_SUPPORT` - Enable text rendering with FreeType2 (default: ON)
-- `SGCT_OPENVR_SUPPORT` - Enable OpenVR support (default: OFF)
-- `SGCT_VRPN_SUPPORT` - Enable VRPN tracking support (default: OFF)
-- `SGCT_SPOUT_SUPPORT` - Enable Spout support on Windows (default: ON)
-- `SGCT_NDI_SUPPORT` - Enable NDI support on Windows (default: ON)
-- `SGCT_TRACY_SUPPORT` - Enable Tracy profiling (default: OFF)
-- `BUILD_SHARED_LIBS` - Build shared libraries instead of static (default: OFF)
 
 ## Architecture
 
@@ -120,17 +94,17 @@ sgct/
 
 ### Running Examples
 
-After building with `SGCT_EXAMPLES=ON`, executables are in `bin/`:
+After building with `SGCT_EXAMPLES=ON`, executables are in `bin/Debug`:
 
 ```bash
 # Run with default single-window config
-./bin/example1
+./bin/Debug/simplecube
 
 # Run with specific configuration
-./bin/example1 -config config/single.json
+./bin/Debug/simplecube --config config/single.json
 
 # Run with fisheye projection
-./bin/example1 -config config/single_fisheye.json
+./bin/Debug/simplecube --config config/single_fisheye.json
 ```
 
 ### Creating a New Application
@@ -211,17 +185,6 @@ SGCT includes and manages these external libraries (in `ext/`):
 - Optional: FreeType, OpenVR, VRPN, Spout, Tracy
 
 Dependencies are handled via CMake `find_package()` with `SGCT_DEP_INCLUDE_*` options controlling which are built internally.
-
-## Testing
-
-Tests use Catch2 and are in `tests/`. They primarily validate configuration loading and parsing:
-
-```bash
-# Build and run all tests
-cmake -B build -DSGCT_BUILD_TESTS=ON
-cmake --build build
-cd build && ctest
-```
 
 Tests are organized by feature: `test_config_load_*.cpp` files test different aspects of JSON config loading.
 
