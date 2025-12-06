@@ -12,13 +12,25 @@ SGCT uses CMake (minimum version 3.25).
 
 ### Basic Build Commands
 
+The project uses CMake presets (defined in `CMakePresets.json`):
+
 ```bash
-# Configure (creates build/Debug directory)
+# Configure (creates build/debug directory)
 cmake --preset debug
 
-# Build
+# Build (builds sgct library and simplecube by default)
+cmake --build --preset debug
+
+# Build with examples enabled (first time)
+cmake --preset debug -DSGCT_EXAMPLES=ON
 cmake --build --preset debug
 ```
+
+The `debug` preset:
+- Configures for Visual Studio 2026 generator on Windows (adapts to native build system on Linux/macOS)
+- Enables examples (`SGCT_EXAMPLES=ON`)
+- Uses static linking (`BUILD_SHARED_LIBS=OFF`)
+- Places executables in `bin/Debug/`
 
 ## Architecture
 
@@ -51,6 +63,21 @@ SGCT applications are configured via JSON files (see `config/*.json` for example
 
 Configuration is loaded via `sgct::loadCluster(path)` which returns a `config::Cluster` object.
 
+**Available example configurations** (in `config/`):
+- `single.json` - Basic single window, planar projection
+- `single_fisheye.json` - 180° fisheye projection (512×512)
+- `single_fisheye_fxaa.json` - Fisheye with FXAA anti-aliasing
+- `single_cylindrical.json` - Cylindrical projection (panoramic)
+- `single_equirectangular.json` - 360° equirectangular (spherical)
+- `single_fxaa.json` - Planar with FXAA
+- `single_texturemapped.json` - Mesh-based warping/blending
+- `single_sbs_stereo.json` - Side-by-side stereoscopic
+- `single_two_win.json` / `single_two_win_3D.json` - Multi-window configurations
+- `two_nodes.json` - Two-node cluster setup (demonstrates master/client)
+- `spherical_mirror.json` / `spherical_mirror_4meshes.json` - Spherical mirror projection
+- `spout_output_*.json` - Spout streaming configurations (Windows only)
+- `3DTV.json`, `Kinect.json`, `multi_window.json` - Various specialized setups
+
 ### Callback-Based Architecture
 
 SGCT applications implement these callbacks registered via `Engine::Callbacks`:
@@ -64,8 +91,12 @@ SGCT applications implement these callbacks registered via `Engine::Callbacks`:
 
 **Optional callbacks:**
 - `postSyncPreDraw` - After sync, before draw
+- `postDraw` - After draw, before buffer swap
+- `postProcess(const Window&, FrustumMode, unsigned int, ivec2)` - Apply post-processing effects to the rendered frame (receives input texture, renders to current framebuffer)
+- `draw2D(RenderData&)` - Render 2D overlays/HUDs after post-effects
 - `cleanup` - Release OpenGL resources
-- `keyboard`, `mouseButton`, `mousePos`, `scroll` - Input handling
+- `preWindow` - Called before window creation (before OpenGL context exists)
+- `keyboard`, `character`, `mouseButton`, `mousePos`, `scroll` - Input handling
 
 The synchronization model: Server runs `preSync` → `encode`, sends data to clients, clients `decode`, then all nodes `draw` in sync.
 
@@ -81,9 +112,13 @@ sgct/
 │   └── correction/        # Warping/blending mesh loaders
 ├── src/                   # Implementation files (matches include/)
 ├── apps/                  # Example applications
-│   ├── example1/          # Basic triangle example
+│   ├── example1/          # Minimal triangle example (best starting template)
+│   ├── simplecube/        # Main testbed - grid of boxes with post-processing
 │   ├── network/           # Network/sync example
-│   └── ...                # Various specialized examples
+│   ├── simplenavigation/  # Navigation/interaction example
+│   ├── heightmapping/     # Terrain rendering
+│   ├── spout*/            # Spout integration examples (Windows)
+│   └── ...                # 20+ specialized examples
 ├── config/                # Example JSON configuration files
 ├── tests/                 # Test suite (Catch2-based)
 ├── ext/                   # External dependencies
@@ -107,19 +142,121 @@ After building with `SGCT_EXAMPLES=ON`, executables are in `bin/Debug`:
 ./bin/Debug/simplecube --config config/single_fisheye.json
 ```
 
+### Understanding apps/simplecube (Main Testbed)
+
+`apps/simplecube` is the primary testbed for SGCT development and testing. It demonstrates most core features and serves as a comprehensive example.
+
+**Structure:**
+- `main.cpp` - Application entry point with all callback implementations
+- `box.h` / `box.cpp` - Box rendering class (VAO/VBO management)
+- `CMakeLists.txt` - Build configuration
+
+**What it demonstrates:**
+
+1. **Multi-object Scene**: Creates an 8×8×8 grid of colored cubes (511 boxes total, center omitted)
+   - Each box is 0.8 units with 3.0 unit separation
+   - Boxes use per-face colors (red, green, blue, yellow, magenta, cyan)
+   - Scene rotates around origin on two axes
+
+2. **Complete Callback Implementation**:
+   - `initOpenGL` - Sets up geometry, shaders, and post-process shader
+   - `draw` - Renders all boxes with proper MVP transforms
+   - `postProcess` - Applies color inversion effect as demonstration
+   - `postDraw` - Available for additional rendering (currently empty)
+   - `preSync/encode/decode` - Synchronizes animation time across cluster
+   - `cleanup` - Properly releases OpenGL resources
+   - `keyboard` - ESC key handling
+
+3. **Shader Management**:
+   - Main shader ("xform"): Basic vertex transformation + color pass-through
+   - Post-process shader ("postprocess"): Full-screen quad with color inversion
+   - Both shaders defined inline using raw string literals
+
+4. **Post-Processing Pipeline**:
+   - Demonstrates the `postProcess` callback
+   - Receives rendered frame as texture
+   - Applies full-screen effect (color inversion in this case)
+   - Uses `Window::renderScreenQuad()` helper for full-screen rendering
+
+5. **OpenGL Best Practices**:
+   - VAO/VBO setup with proper attribute pointers
+   - Backface culling enabled
+   - Depth testing
+   - Resource cleanup in destructors
+   - Proper bind/unbind patterns
+
+**Key Code Patterns from simplecube:**
+
+```cpp
+// Box creation with position offset
+boxes.push_back(std::make_unique<Box>(boxSize, position));
+
+// Per-box transformation in draw loop
+for (const auto& box : boxes) {
+    glm::mat4 boxTransform = glm::translate(scene, box->position());
+    const glm::mat4 mvp =
+        glm::make_mat4(data.modelViewProjectionMatrix.values.data()) * boxTransform;
+    glUniformMatrix4fv(matrixLoc, 1, GL_FALSE, glm::value_ptr(mvp));
+    box->draw();
+}
+
+// Post-processing setup
+void postProcess(const Window& window, FrustumMode, unsigned int inputTexture, ivec2) {
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, inputTexture);
+
+    const ShaderProgram& ppPrg = ShaderManager::instance().shaderProgram("postprocess");
+    ppPrg.bind();
+    window.renderScreenQuad();
+    ppPrg.unbind();
+}
+```
+
+**Testing Different Projections with simplecube:**
+
+The grid of boxes provides excellent visual feedback for testing projections. When testing bloom, use an HDR-enabled configuration.
+
+```bash
+# Standard planar projection with bloom (requires config/single_bloom.json with HDR)
+./bin/Debug/simplecube --config config/single_bloom.json
+
+# Standard configs (no HDR by default)
+./bin/Debug/simplecube --config config/single.json
+./bin/Debug/simplecube --config config/single_fisheye.json
+./bin/Debug/simplecube --config config/single_cylindrical.json
+```
+
+**Why simplecube is the main testbed:**
+- Complex enough to test performance and rendering pipeline
+- Simple enough to understand and modify quickly
+- Demonstrates both basic and advanced features
+- Visual feedback makes issues immediately apparent
+- Tests multiple viewports/projections effectively due to 3D grid structure
+- Good for testing post-processing effects (bloom, FXAA, etc.)
+
 ### Creating a New Application
 
 1. Include `<sgct/sgct.h>` and `<sgct/opengl.h>`
 2. Implement required callbacks: `initOpenGL`, `draw`, `preSync`, `encode`, `decode`
 3. In `main()`:
-   - Parse arguments: `parseArguments()`
-   - Load cluster: `loadCluster(configPath)`
+   - Parse arguments: `Configuration config = parseArguments(arg)`
+   - Load cluster: `config::Cluster cluster = loadCluster(config.configFilename)`
    - Create Engine::Callbacks and register functions
    - Create engine: `Engine::create(cluster, callbacks, config)`
    - Run: `Engine::instance().exec()`
    - Cleanup: `Engine::destroy()`
 
 See `apps/example1/main.cpp` for the minimal template.
+
+**Command-Line Arguments:**
+
+SGCT provides `parseArguments()` (from `<sgct/commandline.h>`, included via `<sgct/sgct.h>`) which handles:
+- `--config <path>` - Specify configuration file
+- `--local <id>` - Which node to run (for multi-node configs)
+- `--firm-sync` - Enable stricter synchronization
+- Various debug and logging options
+
+The returned `Configuration` struct contains the parsed settings passed to `Engine::create()`.
 
 ### State Synchronization
 
@@ -149,20 +286,25 @@ void decode(const std::vector<std::byte>& data) {
 
 ### Rendering with Projections
 
-The `draw` callback receives `RenderData` with pre-computed projection matrices:
+The `draw` callback receives `RenderData` with pre-computed matrices and viewport info:
 
 ```cpp
 void draw(const RenderData& data) {
-    // data.modelViewProjectionMatrix - Combined MVP matrix
+    // data.modelMatrix - Model matrix
     // data.viewMatrix - View matrix
     // data.projectionMatrix - Projection matrix
+    // data.modelViewProjectionMatrix - Combined MVP matrix (cached)
+    // data.window - Reference to current Window
+    // data.viewport - Reference to current BaseViewport
+    // data.frustumMode - Mono, StereoLeftEye, or StereoRightEye
+    // data.bufferSize - Framebuffer size (ivec2)
 
     glm::mat4 mvp = glm::make_mat4(data.modelViewProjectionMatrix.values.data()) * sceneTransform;
     // Use MVP to render scene
 }
 ```
 
-SGCT handles all viewport/projection setup - just render using the provided matrices.
+SGCT handles all viewport/projection setup - just render using the provided matrices. For stereo rendering, `draw` is called twice per viewport (once per eye) with different `frustumMode` values.
 
 ## Coding Conventions
 
@@ -214,3 +356,131 @@ Log::Info("Message");
 Log::Warning("Warning");
 Log::Error("Error");
 ```
+
+### Window Helpers
+
+```cpp
+// Access current window and its properties
+const Window& win = data.window;
+ivec2 size = win.framebufferSize();
+
+// Render full-screen quad (useful for post-processing)
+window.renderScreenQuad();
+
+// Check if running as master/client
+if (Engine::instance().isMaster()) {
+    // Master-only code
+}
+```
+
+### Engine Access
+
+```cpp
+// Get the singleton Engine instance
+Engine& engine = Engine::instance();
+
+// Control execution
+engine.terminate(); // Exit the main loop
+
+// Get timing information
+double t = time(); // Seconds since program start
+const Engine::Statistics& stats = engine.statistics();
+double fps = 1.0 / stats.dt();
+```
+
+## HDR Rendering and Post-Processing
+
+SGCT supports HDR (High Dynamic Range) rendering through the `bufferBitDepth` configuration option in window configs.
+
+### Enabling HDR
+
+Add to your config JSON:
+```json
+{
+  "windows": [{
+    "bufferBitDepth": "16float",  // Options: "8", "16", "16float", "16int", "32float"
+    "viewports": [...]
+  }]
+}
+```
+
+**Buffer Format Options**:
+- `"8"` - GL_RGBA8 (default, LDR, 8-bit per channel)
+- `"16"` - GL_RGBA16 (high precision LDR, 16-bit integer per channel)
+- `"16float"` - GL_RGBA16F (HDR, half-float, recommended for bloom and HDR effects)
+- `"16int"` - GL_RGBA16I (signed integer)
+- `"32float"` - GL_RGBA32F (full precision HDR, higher memory/bandwidth cost)
+
+### Post-Processing Pipeline
+
+The `postProcess` callback receives the rendered frame texture:
+```cpp
+void postProcess(const Window& window, FrustumMode, unsigned int inputTexture, ivec2 size)
+```
+
+**Key Points**:
+- `inputTexture` is in the format specified by `bufferBitDepth`
+- Called after main rendering, before buffer swap
+- Should render result to currently bound framebuffer (usually back to screen)
+- Use `window.renderScreenQuad()` to draw full-screen effects
+- Can chain multiple effects by using intermediate framebuffers
+
+**Example** (see `apps/simplecube/main.cpp`):
+```cpp
+void postProcess(const Window& window, FrustumMode, unsigned int inputTexture, ivec2) {
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, inputTexture);
+    
+    const ShaderProgram& ppPrg = ShaderManager::instance().shaderProgram("postprocess");
+    ppPrg.bind();
+    window.renderScreenQuad();  // Renders full-screen quad
+    ppPrg.unbind();
+}
+```
+
+For complex effects like bloom, see `docs/bloom_postprocess_design.md`.
+
+## Additional Notes
+
+### Multi-Node Testing
+
+To test cluster synchronization locally with `two_nodes.json`:
+1. Run first instance: `./bin/Debug/simplecube --config config/two_nodes.json --local 0`
+2. Run second instance: `./bin/Debug/simplecube --config config/two_nodes.json --local 1`
+3. Both windows should show synchronized animation
+
+### Viewport and Projection Types
+
+Each viewport in a config file specifies a projection type:
+- `PlanarProjection` - Standard perspective projection
+- `FisheyeProjection` - Fisheye/dome projection (FOV up to 360°)
+- `CylindricalProjection` - Panoramic projection
+- `EquirectangularProjection` - Spherical 360° projection
+- `SphericalMirrorProjection` - For spherical mirror displays
+- Plus texture-mapped/mesh-based warping for arbitrary display surfaces
+
+### Key Files Reference
+
+- `include/sgct/sgct.h` - Main include (brings in most commonly needed headers)
+- `include/sgct/engine.h` - Engine class and main API
+- `include/sgct/callbackdata.h` - RenderData structure definition
+- `include/sgct/window.h` - Window management
+- `include/sgct/shadermanager.h` - Shader compilation and management
+- `include/sgct/shareddata.h` - Helper macros for network synchronization
+- `include/sgct/commandline.h` - Command-line argument parsing
+- `src/engine.cpp` - Engine implementation (main rendering loop)
+
+### Testing Changes
+
+When modifying SGCT core:
+1. Build with `cmake --build --preset debug`
+2. Run `simplecube` with various configs to test rendering pipeline
+3. Run tests with `ctest` from the build directory
+4. Test different projection types to ensure changes work universally
+
+### Performance Considerations
+
+- Synchronization happens every frame - minimize data in encode/decode
+- Draw callback may be called multiple times per frame (stereo, multiple viewports)
+- Post-processing adds overhead - texture copies can be expensive
+- Fisheye/cylindrical projections render to cubemap internally (6 rendering passes)

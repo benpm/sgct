@@ -1,28 +1,35 @@
 {
 	"version": "2.0.0",
+	"problemMatcher": [
+		{
+			// from https://github.com/equeim/clang-cl-problem-matcher
+			"owner": "clang",
+			"pattern": [
+				{
+					"regexp": "^(.*?)\\((\\d+),(\\d*)\\):\\s+(?:fatal\\s+)?(warning|error):\\s+(.*)$",
+					"file": 1,
+					"line": 2,
+					"column": 3,
+					"severity": 4,
+					"message": 5
+				}
+			]
+		}
+	],
 	"tasks": [
 		{
-			"type": "cmake",
-			"label": "CMake: build",
-			"command": "build",
+			"label": "build debug",
+			"type": "shell",
+			"command": "cmake",
+			"args": [
+				"--build",
+				"--preset",
+				"debug"
+			],
 			"group": {
 				"kind": "build",
 				"isDefault": true
-			},
-			"runOptions": {
-				"reevaluateOnRerun": true
-			},
-			"problemMatcher": [
-				"$msCompile"
-			],
-			"detail": "CMake template build task"
-		},
-		{
-			"type": "cmake",
-			"label": "CMake: configure",
-			"command": "configure",
-			"preset": "debug",
-			"detail": "CMake template configure task"
+			}
 		}
 	]
 }

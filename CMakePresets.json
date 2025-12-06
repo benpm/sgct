@@ -8,15 +8,10 @@
   "configurePresets": [
     {
       "name": "debug",
-      "displayName": "Windows Visual Studio 2026 Debug",
-      "description": "Debug build using Visual Studio 2026 generator with examples and tests",
-      "generator": "Visual Studio 18 2026",
+      "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/debug",
-      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_C_COMPILER": "cl",
-        "CMAKE_CXX_COMPILER": "cl",
         "SGCT_EXAMPLES": "ON",
         "BUILD_SHARED_LIBS": "OFF",
         "SGCT_DEP_INCLUDE_FREETYPE": "OFF"
@@ -26,7 +21,6 @@
   "buildPresets": [
     {
       "name": "debug",
-      "displayName": "Build Windows VS2026 Debug",
       "configurePreset": "debug",
       "targets": [
         "sgct", "simplecube"

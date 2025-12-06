@@ -7,6 +7,7 @@
       "port": 20401,
       "windows": [
         {
+          "bufferbitdepth": "16f",
           "fxaa": true,
           "fullscreen": false,
           "stereo": "side_by_side",

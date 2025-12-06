@@ -16,6 +16,8 @@
 #include <sgct/engine.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <algorithm>
+#include <fstream>
 #include <memory>
 #include <string_view>
 #include <vector>
@@ -24,6 +26,8 @@ namespace {
     std::vector<std::unique_ptr<Box>> boxes;
     GLint matrixLoc = -1;
     double currentTime = 0.0;
+    bool firstFrameValidated = false;
+    bool testingMode = false;
 
     constexpr std::string_view VertexShader = R"(
   #version 330 core
@@ -78,7 +82,7 @@ namespace {
 
 using namespace sgct;
 
-void initOGL(GLFWwindow* win) {
+void initOGL(GLFWwindow*) {
     // Create a 4x4x4 grid of boxes around the origin
     constexpr int n = 8;
     constexpr float boxSize = 0.8f;
@@ -161,7 +165,47 @@ void draw(const RenderData& data) {
 }
 
 void postDraw() {
-    
+    // Validate first frame rendering (only in testing mode)
+    if (testingMode && !firstFrameValidated) {
+        const Window& window = *Engine::instance().thisNode().windows()[0];
+        const ivec2 size = window.framebufferResolution();
+        
+        // Read framebuffer contents
+        std::vector<unsigned char> pixels(size.x * size.y * 3);
+        glReadPixels(0, 0, size.x, size.y, GL_RGB, GL_UNSIGNED_BYTE, pixels.data());
+        
+        // Check if all pixels are the same color (indicating failed render)
+        bool allSameColor = true;
+        unsigned char r0 = pixels[0];
+        unsigned char g0 = pixels[1];
+        unsigned char b0 = pixels[2];
+        
+        for (size_t i = 3; i < pixels.size(); i += 3) {
+            if (pixels[i] != r0 || pixels[i+1] != g0 || pixels[i+2] != b0) {
+                allSameColor = false;
+                break;
+            }
+        }
+        
+        // Write result
+        std::ofstream resultFile("frame_test_result.txt");
+        if (allSameColor) {
+            resultFile << "FAIL: First frame is solid color RGB(" 
+                      << static_cast<int>(r0) << ", " 
+                      << static_cast<int>(g0) << ", " 
+                      << static_cast<int>(b0) << ")\n";
+            Log::Error("Frame test FAILED - solid color detected");
+        } else {
+            resultFile << "PASS: First frame rendered with varying colors\n";
+            Log::Info("Frame test PASSED - frame rendered correctly");
+        }
+        resultFile.close();
+        
+        firstFrameValidated = true;
+        
+        // Exit after first frame test
+        Engine::instance().terminate();
+    }
 }
 
 void preSync() {
@@ -209,6 +253,15 @@ void keyboard(Key key, Modifier, Action action, int, Window*) {
 
 int main(int argc, char** argv) {
     std::vector<std::string> arg(argv + 1, argv + argc);
+    
+    // Check for --testing flag
+    auto it = std::find(arg.begin(), arg.end(), "--testing");
+    if (it != arg.end()) {
+        testingMode = true;
+        arg.erase(it);  // Remove --testing so parseArguments doesn't choke
+        Log::Info("Running in testing mode - will exit after first frame");
+    }
+    
     Configuration config = parseArguments(arg);
 
     config::Cluster cluster = loadCluster(config.configFilename);
