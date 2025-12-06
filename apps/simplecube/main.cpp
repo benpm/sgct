@@ -7,6 +7,7 @@
  ****************************************************************************************/
 
 #include "box.h"
+#include "bloom_effect.h"
 #include <sgct/sgct.h>
 #include <sgct/opengl.h>
 #include <sgct/projection/fisheye.h>
@@ -17,8 +18,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <algorithm>
+#include <format>
 #include <fstream>
 #include <memory>
+#include <sstream>
 #include <string_view>
 #include <vector>
 
@@ -28,6 +31,19 @@ namespace {
     double currentTime = 0.0;
     bool firstFrameValidated = false;
     bool testingMode = false;
+    std::unique_ptr<BloomEffect> bloomEffect;
+    bool enableBloom = true;
+
+    std::string loadShaderFile(const std::string& filename) {
+        std::ifstream file(filename);
+        if (!file.is_open()) {
+            sgct::Log::Error(std::format("Failed to open shader file: {}", filename));
+            return "";
+        }
+        std::stringstream buffer;
+        buffer << file.rdbuf();
+        return buffer.str();
+    }
 
     constexpr std::string_view VertexShader = R"(
   #version 330 core
@@ -52,32 +68,8 @@ namespace {
   void main() { color = vec4(fragColor, 1.0); }
 )";
 
-    constexpr std::string_view PostProcessVertexShader = R"(
-  #version 330 core
-  
-  layout (location = 0) in vec3 in_position;
-  layout (location = 1) in vec2 in_texCoords;
-
-  out vec2 uv;
-
-  void main() {
-    gl_Position = vec4(in_position, 1.0);
-    uv = in_texCoords;
-  })";
-
-    constexpr std::string_view PostProcessFragmentShader = R"(
-  #version 330 core
-
-  uniform sampler2D tex;
-  in vec2 uv;
-  out vec4 color;
-
-  void main() {
-    vec4 originalColor = texture(tex, uv);
-    color = vec4(1.0 - originalColor.rgb, 1.0);
-  })";
-
     GLint postProcessTexLoc = -1;
+    GLint passthroughTexLoc = -1;
 } // namespace
 
 using namespace sgct;
@@ -114,17 +106,31 @@ void initOGL(GLFWwindow*) {
     matrixLoc = glGetUniformLocation(prg.id(), "mvp");
     prg.unbind();
 
-    // Initialize post-process shader
-    ShaderManager::instance().addShaderProgram(
-        "postprocess",
-        PostProcessVertexShader,
-        PostProcessFragmentShader
-    );
+    // Initialize post-process shaders from files
+    const std::string shaderPath = "apps/simplecube/shaders/";
+    const std::string postVertSrc = loadShaderFile(shaderPath + "postprocess_vertex.vert");
+    const std::string postFragSrc = loadShaderFile(shaderPath + "postprocess_invert.frag");
+    const std::string passthroughFragSrc = loadShaderFile(shaderPath + "passthrough.frag");
+
+    ShaderManager::instance().addShaderProgram("postprocess", postVertSrc, postFragSrc);
     const ShaderProgram& ppPrg = ShaderManager::instance().shaderProgram("postprocess");
     ppPrg.bind();
     postProcessTexLoc = glGetUniformLocation(ppPrg.id(), "tex");
     glUniform1i(postProcessTexLoc, 0); // Texture unit 0
     ppPrg.unbind();
+
+    // Initialize passthrough shader for bloom output
+    ShaderManager::instance().addShaderProgram("passthrough", postVertSrc, passthroughFragSrc);
+    const ShaderProgram& passPrg = ShaderManager::instance().shaderProgram("passthrough");
+    passPrg.bind();
+    passthroughTexLoc = glGetUniformLocation(passPrg.id(), "tex");
+    glUniform1i(passthroughTexLoc, 0); // Texture unit 0
+    passPrg.unbind();
+
+    // Initialize bloom effect
+    const ivec2 windowSize = Engine::instance().thisNode().windows()[0]->framebufferResolution();
+    bloomEffect = std::make_unique<BloomEffect>(windowSize.x, windowSize.y);
+    Log::Info(std::format("Bloom effect initialized for window size {}x{}", windowSize.x, windowSize.y));
 }
 
 void draw(const RenderData& data) {
@@ -225,29 +231,63 @@ void decode(const std::vector<std::byte>& data) {
     deserializeObject(data, pos, currentTime);
 }
 
-void postProcess(const Window& window, FrustumMode, unsigned int inputTexture, ivec2) {
-    // Bind the input texture containing the rendered frame
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, inputTexture);
+void postProcess(const Window& window, FrustumMode, unsigned int inputTexture, ivec2 size) {
+    if (enableBloom && bloomEffect) {
+        // Render bloom effect (internally composites with original scene)
+        bloomEffect->render(inputTexture, size);
 
-    // Use the post-process shader
-    const ShaderProgram& ppPrg = ShaderManager::instance().shaderProgram("postprocess");
-    ppPrg.bind();
+        // Bloom effect outputs composited result, render to current framebuffer
+        GLuint bloomOutput = bloomEffect->outputTexture();
 
-    // Render a full-screen quad
-    window.renderScreenQuad();
+        // Render full-screen quad with bloom output using passthrough shader
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, bloomOutput);
+        
+        const ShaderProgram& passPrg = ShaderManager::instance().shaderProgram("passthrough");
+        passPrg.bind();
+        window.renderScreenQuad();
+        passPrg.unbind();
+    } else {
+        // Original behavior: simple pass-through or color inversion
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, inputTexture);
 
-    // Unbind shader
-    ppPrg.unbind();
+        const ShaderProgram& ppPrg = ShaderManager::instance().shaderProgram("postprocess");
+        ppPrg.bind();
+        window.renderScreenQuad();
+        ppPrg.unbind();
+    }
 }
 
 void cleanup() {
     boxes.clear();
+    bloomEffect.reset();
 }
 
 void keyboard(Key key, Modifier, Action action, int, Window*) {
-    if (key == Key::Esc && action == Action::Press) {
-        Engine::instance().terminate();
+    if (action == Action::Press) {
+        if (key == Key::Esc) {
+            Engine::instance().terminate();
+        } else if (key == Key::B) {
+            enableBloom = !enableBloom;
+            Log::Info(std::format("Bloom: {}", enableBloom ? "ON" : "OFF"));
+        } else if (key == Key::Up && bloomEffect) {
+            auto& settings = bloomEffect->settings();
+            settings.bloomStrength = std::min(settings.bloomStrength + 0.01f, 1.0f);
+            Log::Info(std::format("Bloom strength: {:.3f}", settings.bloomStrength));
+        } else if (key == Key::Down && bloomEffect) {
+            auto& settings = bloomEffect->settings();
+            settings.bloomStrength = std::max(settings.bloomStrength - 0.01f, 0.0f);
+            Log::Info(std::format("Bloom strength: {:.3f}", settings.bloomStrength));
+        } else if (key == Key::T && bloomEffect) {
+            auto& settings = bloomEffect->settings();
+            settings.threshold += 0.1f;
+            Log::Info(std::format("Bloom threshold: {:.2f}", settings.threshold));
+        } else if (key == Key::G && bloomEffect) {
+            auto& settings = bloomEffect->settings();
+            settings.threshold = std::max(settings.threshold - 0.1f, 0.0f);
+            Log::Info(std::format("Bloom threshold: {:.2f}", settings.threshold));
+        }
     }
 }
 

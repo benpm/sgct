@@ -14,6 +14,7 @@
         "CMAKE_BUILD_TYPE": "Debug",
         "SGCT_EXAMPLES": "ON",
         "BUILD_SHARED_LIBS": "OFF",
+        "SGCT_FREETYPE_SUPPORT": "OFF",
         "SGCT_DEP_INCLUDE_FREETYPE": "OFF"
       }
     }

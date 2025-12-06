@@ -1,5 +1,6 @@
 {
 	"version": "2.0.0",
+	"type": "shell",
 	"problemMatcher": [
 		{
 			// from https://github.com/equeim/clang-cl-problem-matcher
@@ -16,10 +17,12 @@
 			]
 		}
 	],
+	"options": {
+		"cwd": "${workspaceFolder}"
+	},
 	"tasks": [
 		{
 			"label": "build debug",
-			"type": "shell",
 			"command": "cmake",
 			"args": [
 				"--build",
@@ -29,6 +32,19 @@
 			"group": {
 				"kind": "build",
 				"isDefault": true
+			}
+		},
+		{
+			"label": "configure debug",
+			"command": "${config:}",
+			"args": [
+				"--preset",
+				"debug"
+			],
+			"group": "build",
+			"icon": {
+				"id": "gear",
+				"color": "terminal.ansiBlue"
 			}
 		}
 	]

@@ -398,7 +398,7 @@ Add to your config JSON:
 ```json
 {
   "windows": [{
-    "bufferBitDepth": "16float",  // Options: "8", "16", "16float", "16int", "32float"
+    "bufferbitdepth": "16f",  // Options: "8", "16", "16f", "32f", "16i", "32i", "16ui", "32ui"
     "viewports": [...]
   }]
 }
@@ -407,9 +407,9 @@ Add to your config JSON:
 **Buffer Format Options**:
 - `"8"` - GL_RGBA8 (default, LDR, 8-bit per channel)
 - `"16"` - GL_RGBA16 (high precision LDR, 16-bit integer per channel)
-- `"16float"` - GL_RGBA16F (HDR, half-float, recommended for bloom and HDR effects)
-- `"16int"` - GL_RGBA16I (signed integer)
-- `"32float"` - GL_RGBA32F (full precision HDR, higher memory/bandwidth cost)
+- `"16f"` - GL_RGBA16F (HDR, half-float, recommended for bloom and HDR effects)
+- `"32f"` - GL_RGBA32F (full precision HDR, higher memory/bandwidth cost)
+- `"16i"`, `"32i"`, `"16ui"`, `"32ui"` - Integer formats for special use cases
 
 ### Post-Processing Pipeline
 
@@ -419,7 +419,7 @@ void postProcess(const Window& window, FrustumMode, unsigned int inputTexture, i
 ```
 
 **Key Points**:
-- `inputTexture` is in the format specified by `bufferBitDepth`
+- `inputTexture` is in the format specified by `bufferbitdepth`
 - Called after main rendering, before buffer swap
 - Should render result to currently bound framebuffer (usually back to screen)
 - Use `window.renderScreenQuad()` to draw full-screen effects
@@ -430,7 +430,7 @@ void postProcess(const Window& window, FrustumMode, unsigned int inputTexture, i
 void postProcess(const Window& window, FrustumMode, unsigned int inputTexture, ivec2) {
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, inputTexture);
-    
+
     const ShaderProgram& ppPrg = ShaderManager::instance().shaderProgram("postprocess");
     ppPrg.bind();
     window.renderScreenQuad();  // Renders full-screen quad
@@ -438,7 +438,35 @@ void postProcess(const Window& window, FrustumMode, unsigned int inputTexture, i
 }
 ```
 
-For complex effects like bloom, see `docs/bloom_postprocess_design.md`.
+### Bloom Effect Implementation
+
+**simplecube** now includes a full HDR bloom implementation using mip-map Gaussian approximation. See `docs/bloom_postprocess_design.md` for complete technical details.
+
+**Files**:
+- `apps/simplecube/bloom_effect.h/cpp` - Bloom effect implementation
+- `apps/simplecube/shaders/bloom_*.frag` - Bloom shader stages
+- `config/single_bloom.json` - Example HDR config with bloom
+
+**Usage**:
+```bash
+# Run with bloom enabled (default)
+./bin/Debug/simplecube --config config/single_bloom.json
+
+# Keyboard controls:
+# B - Toggle bloom on/off
+# ↑/↓ - Adjust bloom strength (0.0-1.0)
+# T/G - Adjust brightness threshold
+```
+
+**Bloom Parameters** (adjustable in `BloomEffect::Settings`):
+- `threshold` - Luminance threshold for bloom (default: 1.0)
+- `softThreshold` - Smoothness of threshold (default: 0.5)
+- `bloomStrength` - Bloom intensity (default: 0.04)
+- `maxBrightness` - Clamp to prevent fireflies (default: 10.0)
+- `mipLevels` - Number of mip levels to sample (default: 6)
+- `useTentFilter` - Enable tent filter on upsample (default: true)
+
+**Performance**: ~1ms at 1080p on modern GPUs (see design doc for details)
 
 ## Additional Notes
 
