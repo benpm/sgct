@@ -100,6 +100,12 @@ else ()
   find_package(glfw3 REQUIRED)
 endif ()
 
+# ImGui (uses sources from Tracy)
+if (SGCT_EXAMPLES)
+  add_subdirectory(imgui)
+  set_property(TARGET imgui PROPERTY FOLDER "External")
+endif ()
+
 if (SGCT_DEP_INCLUDE_LIBPNG)
   add_subdirectory(lpng)
   set_property(TARGET png PROPERTY FOLDER "External")

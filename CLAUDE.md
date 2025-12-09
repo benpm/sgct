@@ -234,6 +234,20 @@ The grid of boxes provides excellent visual feedback for testing projections. Wh
 - Tests multiple viewports/projections effectively due to 3D grid structure
 - Good for testing post-processing effects (bloom, FXAA, etc.)
 
+**Testing Different Projections with simplecube:**
+
+The grid of boxes provides excellent visual feedback for testing projections. When testing bloom, use an HDR-enabled configuration.
+
+```bash
+# Standard planar projection with bloom (requires config/single_bloom.json with HDR)
+./bin/Debug/simplecube --config config/single_bloom.json
+
+# Standard configs (no HDR by default)
+./bin/Debug/simplecube --config config/single.json
+./bin/Debug/simplecube --config config/single_fisheye.json
+./bin/Debug/simplecube --config config/single_cylindrical.json
+```
+
 ### Creating a New Application
 
 1. Include `<sgct/sgct.h>` and `<sgct/opengl.h>`
@@ -453,10 +467,25 @@ void postProcess(const Window& window, FrustumMode, unsigned int inputTexture, i
 ./bin/Debug/simplecube --config config/single_bloom.json
 
 # Keyboard controls:
+# H - Toggle ImGui control panel
 # B - Toggle bloom on/off
 # ↑/↓ - Adjust bloom strength (0.0-1.0)
 # T/G - Adjust brightness threshold
 ```
+
+**ImGui Control Panel**:
+The simplecube example includes an ImGui-based control panel for real-time bloom adjustments:
+- **Enable Bloom** checkbox - Toggle bloom on/off
+- **View Mode** dropdown - Select visualization mode:
+  - Composited (Normal) - Final output with bloom
+  - Bloom Only - Just the bloom contribution
+  - Bright Pass - Threshold extraction result
+  - Blur Pass - Mip-sampled blur result
+  - Scene Only - Original scene without bloom
+- **Threshold Settings** - Adjust luminance threshold and softness
+- **Bloom Intensity** - Control strength and max brightness clamping
+- **Quality Settings** - Adjust mip levels and tent filter
+- **Presets** - Quick preset buttons (Subtle, Normal, Strong, Dreamy)
 
 **Bloom Parameters** (adjustable in `BloomEffect::Settings`):
 - `threshold` - Luminance threshold for bloom (default: 1.0)

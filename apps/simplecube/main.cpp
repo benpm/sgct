@@ -17,6 +17,10 @@
 #include <sgct/engine.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_opengl3.h>
+#include <GLFW/glfw3.h>
 #include <algorithm>
 #include <format>
 #include <fstream>
@@ -33,6 +37,24 @@ namespace {
     bool testingMode = false;
     std::unique_ptr<BloomEffect> bloomEffect;
     bool enableBloom = true;
+    bool showUI = true;
+
+    // Debug view modes
+    enum class ViewMode {
+        Composited,      // Normal view with bloom composited
+        BloomOnly,       // Just the bloom contribution (upsampled)
+        BrightPass,      // The threshold extraction result
+        BlurPass,        // The mip-sampled blur result
+        SceneOnly        // Original scene without bloom
+    };
+    ViewMode currentViewMode = ViewMode::Composited;
+    const char* viewModeNames[] = {
+        "Composited (Normal)",
+        "Bloom Only",
+        "Bright Pass",
+        "Blur Pass",
+        "Scene Only (No Bloom)"
+    };
 
     std::string loadShaderFile(const std::string& filename) {
         std::ifstream file(filename);
@@ -70,11 +92,36 @@ namespace {
 
     GLint postProcessTexLoc = -1;
     GLint passthroughTexLoc = -1;
+
+    // ImGui state
+    GLFWwindow* imguiWindow = nullptr;
 } // namespace
 
 using namespace sgct;
 
-void initOGL(GLFWwindow*) {
+void initOGL(GLFWwindow* sharedWindow) {
+    // Store window for ImGui
+    imguiWindow = sharedWindow;
+
+    // Initialize ImGui
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
+    // Setup ImGui style
+    ImGui::StyleColorsDark();
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.WindowRounding = 5.0f;
+    style.FrameRounding = 3.0f;
+    style.Alpha = 0.95f;
+
+    // Initialize ImGui backends
+    ImGui_ImplGlfw_InitForOpenGL(sharedWindow, false);  // false = don't install callbacks
+    ImGui_ImplOpenGL3_Init("#version 330");
+
+    Log::Info("ImGui initialized");
+
     // Create a 4x4x4 grid of boxes around the origin
     constexpr int n = 8;
     constexpr float boxSize = 0.8f;
@@ -233,16 +280,33 @@ void decode(const std::vector<std::byte>& data) {
 
 void postProcess(const Window& window, FrustumMode, unsigned int inputTexture, ivec2 size) {
     if (enableBloom && bloomEffect) {
-        // Render bloom effect (internally composites with original scene)
+        // Always render bloom effect to have intermediate textures available
         bloomEffect->render(inputTexture, size);
 
-        // Bloom effect outputs composited result, render to current framebuffer
-        GLuint bloomOutput = bloomEffect->outputTexture();
+        // Select texture based on view mode
+        GLuint textureToDisplay = 0;
+        switch (currentViewMode) {
+            case ViewMode::Composited:
+                textureToDisplay = bloomEffect->outputTexture();
+                break;
+            case ViewMode::BloomOnly:
+                textureToDisplay = bloomEffect->upsampleTexture();
+                break;
+            case ViewMode::BrightPass:
+                textureToDisplay = bloomEffect->brightPassTexture();
+                break;
+            case ViewMode::BlurPass:
+                textureToDisplay = bloomEffect->blurTexture();
+                break;
+            case ViewMode::SceneOnly:
+                textureToDisplay = inputTexture;
+                break;
+        }
 
-        // Render full-screen quad with bloom output using passthrough shader
+        // Render full-screen quad with selected texture using passthrough shader
         glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, bloomOutput);
-        
+        glBindTexture(GL_TEXTURE_2D, textureToDisplay);
+
         const ShaderProgram& passPrg = ShaderManager::instance().shaderProgram("passthrough");
         passPrg.bind();
         window.renderScreenQuad();
@@ -259,15 +323,149 @@ void postProcess(const Window& window, FrustumMode, unsigned int inputTexture, i
     }
 }
 
+void draw2D(const RenderData&) {
+    if (!showUI || !imguiWindow) {
+        return;
+    }
+
+    // Start ImGui frame
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    // Bloom Control Panel
+    ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(320, 400), ImGuiCond_FirstUseEver);
+
+    if (ImGui::Begin("Bloom Controls", &showUI)) {
+        // Enable/Disable bloom
+        ImGui::Checkbox("Enable Bloom", &enableBloom);
+        ImGui::Separator();
+
+        if (enableBloom && bloomEffect) {
+            auto& settings = bloomEffect->settings();
+
+            // View Mode selector
+            ImGui::Text("View Mode:");
+            int viewModeInt = static_cast<int>(currentViewMode);
+            if (ImGui::Combo("##viewmode", &viewModeInt, viewModeNames, IM_ARRAYSIZE(viewModeNames))) {
+                currentViewMode = static_cast<ViewMode>(viewModeInt);
+            }
+            ImGui::Separator();
+
+            // Threshold controls
+            ImGui::Text("Threshold Settings");
+            ImGui::SliderFloat("Threshold", &settings.threshold, 0.0f, 5.0f, "%.2f");
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Luminance threshold for bloom extraction");
+            }
+
+            ImGui::SliderFloat("Soft Threshold", &settings.softThreshold, 0.0f, 1.0f, "%.2f");
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Smoothness of threshold transition");
+            }
+            ImGui::Separator();
+
+            // Bloom intensity controls
+            ImGui::Text("Bloom Intensity");
+            ImGui::SliderFloat("Strength", &settings.bloomStrength, 0.0f, 1.0f, "%.3f");
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Final bloom contribution to the image");
+            }
+
+            ImGui::SliderFloat("Max Brightness", &settings.maxBrightness, 1.0f, 50.0f, "%.1f");
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Clamp bright values to prevent fireflies");
+            }
+            ImGui::Separator();
+
+            // Quality settings
+            ImGui::Text("Quality Settings");
+            ImGui::SliderInt("Mip Levels", &settings.mipLevels, 1, 8);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Number of mip levels to sample (more = wider blur)");
+            }
+
+            ImGui::Checkbox("Use Tent Filter", &settings.useTentFilter);
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Enable tent filter for smoother upsampling");
+            }
+            ImGui::Separator();
+
+            // Preset buttons
+            ImGui::Text("Presets");
+            if (ImGui::Button("Subtle")) {
+                settings.threshold = 1.5f;
+                settings.softThreshold = 0.5f;
+                settings.bloomStrength = 0.02f;
+                settings.maxBrightness = 10.0f;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Normal")) {
+                settings.threshold = 1.0f;
+                settings.softThreshold = 0.5f;
+                settings.bloomStrength = 0.04f;
+                settings.maxBrightness = 10.0f;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Strong")) {
+                settings.threshold = 0.5f;
+                settings.softThreshold = 0.3f;
+                settings.bloomStrength = 0.1f;
+                settings.maxBrightness = 20.0f;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Dreamy")) {
+                settings.threshold = 0.2f;
+                settings.softThreshold = 0.8f;
+                settings.bloomStrength = 0.15f;
+                settings.maxBrightness = 5.0f;
+            }
+        } else {
+            ImGui::TextColored(ImVec4(1.0f, 0.5f, 0.0f, 1.0f), "Bloom is disabled");
+        }
+
+        ImGui::Separator();
+        ImGui::Text("Press H to toggle this panel");
+        ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+    }
+    ImGui::End();
+
+    // Render ImGui
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+}
+
 void cleanup() {
+    // Cleanup ImGui
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
     boxes.clear();
     bloomEffect.reset();
 }
 
-void keyboard(Key key, Modifier, Action action, int, Window*) {
+void keyboard(Key key, Modifier, Action action, int scancode, Window*) {
+    // Forward to ImGui
+    if (imguiWindow) {
+        int glfwAction = (action == Action::Press) ? GLFW_PRESS :
+                         (action == Action::Release) ? GLFW_RELEASE : GLFW_REPEAT;
+        ImGui_ImplGlfw_KeyCallback(imguiWindow, static_cast<int>(key), scancode, glfwAction, 0);
+    }
+
+    // Check if ImGui wants keyboard input
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.WantCaptureKeyboard) {
+        return;
+    }
+
     if (action == Action::Press) {
         if (key == Key::Esc) {
             Engine::instance().terminate();
+        } else if (key == Key::H) {
+            showUI = !showUI;
+            Log::Info(std::format("UI: {}", showUI ? "ON" : "OFF"));
         } else if (key == Key::B) {
             enableBloom = !enableBloom;
             Log::Info(std::format("Bloom: {}", enableBloom ? "ON" : "OFF"));
@@ -288,6 +486,29 @@ void keyboard(Key key, Modifier, Action action, int, Window*) {
             settings.threshold = std::max(settings.threshold - 0.1f, 0.0f);
             Log::Info(std::format("Bloom threshold: {:.2f}", settings.threshold));
         }
+    }
+}
+
+void mouseButton(MouseButton button, Modifier, Action action, Window*) {
+    // Forward to ImGui
+    if (imguiWindow) {
+        int glfwButton = static_cast<int>(button);
+        int glfwAction = (action == Action::Press) ? GLFW_PRESS : GLFW_RELEASE;
+        ImGui_ImplGlfw_MouseButtonCallback(imguiWindow, glfwButton, glfwAction, 0);
+    }
+}
+
+void mousePos(double x, double y, Window*) {
+    // Forward to ImGui
+    if (imguiWindow) {
+        ImGui_ImplGlfw_CursorPosCallback(imguiWindow, x, y);
+    }
+}
+
+void mouseScroll(double xOffset, double yOffset, Window*) {
+    // Forward to ImGui
+    if (imguiWindow) {
+        ImGui_ImplGlfw_ScrollCallback(imguiWindow, xOffset, yOffset);
     }
 }
 
@@ -315,8 +536,12 @@ int main(int argc, char** argv) {
     callbacks.encode = encode;
     callbacks.decode = decode;
     callbacks.draw = draw;
+    callbacks.draw2D = draw2D;
     callbacks.cleanup = cleanup;
     callbacks.keyboard = keyboard;
+    callbacks.mouseButton = mouseButton;
+    callbacks.mousePos = mousePos;
+    callbacks.mouseScroll = mouseScroll;
     callbacks.postDraw = postDraw;
     callbacks.postProcess = postProcess;
 

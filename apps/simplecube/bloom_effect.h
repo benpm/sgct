@@ -32,6 +32,11 @@ public:
     // Get final output texture (to be rendered to screen)
     GLuint outputTexture() const { return _compositeFBO.colorTexture; }
 
+    // Debug textures for visualization
+    GLuint brightPassTexture() const { return _brightFBO.colorTexture; }
+    GLuint blurTexture() const { return _blurFBO.colorTexture; }
+    GLuint upsampleTexture() const { return _upsampleFBO.colorTexture; }
+
     // Runtime parameter adjustment
     void setSettings(const Settings& settings) { _settings = settings; }
     Settings& settings() { return _settings; }

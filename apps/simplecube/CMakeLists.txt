@@ -8,7 +8,7 @@
 
 add_executable(simplecube main.cpp box.cpp box.h bloom_effect.cpp bloom_effect.h)
 set_compile_options(simplecube)
-target_link_libraries(simplecube PRIVATE sgct::sgct)
+target_link_libraries(simplecube PRIVATE sgct::sgct imgui)
 
 if (WIN32)
   add_custom_command(TARGET simplecube POST_BUILD
