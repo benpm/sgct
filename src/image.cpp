@@ -43,14 +43,18 @@
 #pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
 #endif // __clang__
 
-namespace {
+// Include stb at global scope (not in an anonymous namespace): clang would otherwise nest
+// the stb headers' `namespace std` inside the anonymous namespace, making every later
+// `std::` reference ambiguous. The *_STATIC macros give internal linkage, which is what
+// the anonymous namespace was providing.
 #define STBI_NO_SIMD
+#define STB_IMAGE_WRITE_STATIC
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
+#define STB_IMAGE_STATIC
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-} // namespace
 
 #ifdef __clang__
 #pragma clang diagnostic pop
