@@ -1623,14 +1623,17 @@ void Window::renderViewports(FrustumMode frustum, Eye eye) const {
         return;
     }
 
-    // Flip between intermediate and eye texture, so we can avoid extra texture copies
+    // Ping-pong between the intermediate and eye textures so post-processing passes can
+    // avoid extra texture copies. The intermediate texture only exists when FXAA or a
+    // post-process callback is active (createTextures); without them, render straight
+    // into the eye texture
+    const bool hasPostFx = _useFXAA || Engine::instance().postProcessFunction() != nullptr;
     const GLuint texColorOut[2] = {
-        _frameBufferTextures.intermediate,
+        hasPostFx ? _frameBufferTextures.intermediate : frameBufferTextureEye(eye),
         frameBufferTextureEye(eye)
     };
     int curOutIdx = 0;
 
-    // Start with the intermediate texture
     _finalFBO->attachColorTexture(texColorOut[curOutIdx], GL_COLOR_ATTACHMENT0);
 
     if (Engine::instance().settings().useDepthTexture) {
