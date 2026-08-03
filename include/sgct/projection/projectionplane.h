@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,6 +10,7 @@
 #define __SGCT__PROJECTIONPLANE__H__
 
 #include <sgct/sgctexports.h>
+
 #include <sgct/math.h>
 
 namespace sgct {
@@ -23,17 +24,17 @@ public:
     void offset(const vec3& p);
 
     /**
-     * \return coordinates for the lower left projection plane corner
+     * \return Coordinates for the lower left projection plane corner
      */
     const vec3& coordinateLowerLeft() const;
 
     /**
-     * \return coordinates for the upper left projection plane corner
+     * \return Coordinates for the upper left projection plane corner
      */
     const vec3& coordinateUpperLeft() const;
 
     /**
-     * \return coordinates for the upper right projection plane corner
+     * \return Coordinates for the upper right projection plane corner
      */
     const vec3& coordinateUpperRight() const;
 

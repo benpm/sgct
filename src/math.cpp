@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,6 +10,7 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <cstring>
 
 namespace sgct {
 
@@ -17,7 +18,7 @@ mat4 operator*(const mat4& m1, const mat4& m2) {
     const glm::mat4 r =
         glm::make_mat4(m1.values.data()) * glm::make_mat4(m2.values.data());
     mat4 res;
-    std::memcpy(&res, glm::value_ptr(r), sizeof(float[16]));
+    std::memcpy(res.values.data(), glm::value_ptr(r), sizeof(float[16]));
     return res;
 }
 

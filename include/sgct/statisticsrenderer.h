@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,13 +10,15 @@
 #define __SGCT__STATISTICSRENDERER__H__
 
 #include <sgct/sgctexports.h>
-#include <sgct/engine.h>
-#include <sgct/shaderprogram.h>
-#include <memory>
 
-namespace sgct { class Window; }
+#include <sgct/engine.h>
+#include <sgct/math.h>
+#include <array>
 
 namespace sgct {
+
+class Viewport;
+class Window;
 
 class SGCT_EXPORT StatisticsRenderer {
 public:

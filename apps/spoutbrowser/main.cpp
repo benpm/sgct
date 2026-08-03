@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -16,10 +16,10 @@
 
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
-#endif
+#endif // WIN32_LEAN_AND_MEAN
 #ifndef NOMINMAX
 #define NOMINMAX
-#endif
+#endif // NOMINMAX
 #include <SpoutLibrary.h>
 
 #define GLFW_INCLUDE_NONE
@@ -42,9 +42,13 @@ namespace {
     bool isInitialized = false;
 
     constexpr std::string_view VertexShader = R"(
-  #version 330 core
+  #version 460 core
+
   layout(location = 0) in vec2 in_position;
-  out vec2 uv;
+
+  out Data {
+    vec2 texCoords;
+  } out_data;
 
   uniform ivec2 texSize;
   uniform ivec2 windowSize;
@@ -57,27 +61,34 @@ namespace {
     float texAspect = float(texSize.x) / float(texSize.y);
     float winAspect = float(windowSize.x) / float(windowSize.y);
     if (texAspect > winAspect) {
-        texCoords.y = texCoords.y / (winAspect / texAspect);
-        //texCoords.y = clamp(texCoords.y, 0.0, 1.0);
+      texCoords.y = texCoords.y / (winAspect / texAspect);
     }
     else if (texAspect < winAspect) {
-        texCoords.x = texCoords.x / (texAspect / winAspect);
-        //texCoords.x = clamp(texCoords.x, 0.0, 1.0);
+      texCoords.x = texCoords.x / (texAspect / winAspect);
     }
-    uv = texCoords;
+    out_data.texCoords = texCoords;
   })";
 
     constexpr std::string_view FragmentShader = R"(
-  #version 330 core
-  uniform sampler2D tex;
-  in vec2 uv;
+  #version 460 core
+
+  in Data {
+    vec2 texCoords;
+  } in_data;
+
   out vec4 color;
+
+  uniform sampler2D tex;
+
+
   void main() {
-    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) {
-        color = vec4(0.0);
+    if (in_data.texCoords.x < 0.0 || in_data.texCoords.x > 1.0 ||
+        in_data.texCoords.y < 0.0 || in_data.texCoords.y > 1.0)
+    {
+      color = vec4(0.0);
     }
     else {
-        color = texture(tex, uv);
+      color = texture(tex, in_data.texCoords);
     }
   }
 )";
@@ -159,19 +170,24 @@ void draw(const RenderData& data) {
     }
 
     const ShaderProgram& prog = ShaderManager::instance().shaderProgram("xform");
-    prog.bind();
 
-    glUniform2i(
+    glProgramUniform2i(
+        prog.id(),
         glGetUniformLocation(prog.id(), "texSize"),
         senders[currentSender].width, senders[currentSender].height
     );
-    ivec2 res = data.window.windowResolution();
-    glUniform2i(glGetUniformLocation(prog.id(), "windowSize"), res.x, res.y);
+    ivec2 res = data.window.windowSize();
+    glProgramUniform2i(
+        prog.id(),
+        glGetUniformLocation(prog.id(), "windowSize"),
+        res.x,
+        res.y
+    );
 
+    prog.bind();
     glBindVertexArray(vao);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
-
     prog.unbind();
 
     receiver->UnBindSharedTexture();
@@ -218,33 +234,30 @@ void draw2D(const RenderData& data) {
 void initOGL(GLFWwindow*) {
     receiver = GetSpout();
 
-    glGenVertexArrays(1, &vao);
-    glBindVertexArray(vao);
+    glCreateBuffers(1, &vbo);
+    glCreateVertexArrays(1, &vao);
+    glVertexArrayVertexBuffer(vao, 0, vbo, 0, 2 * sizeof(float));
 
-    glGenBuffers(1, &vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glEnableVertexArrayAttrib(vao, 0);
+    glVertexArrayAttribFormat(vao, 0, 2, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayAttribBinding(vao, 0, 0);
 
     constexpr std::array<float, 6 * 2> Vertices = {
-        -1.f, -1.f,   1.f, -1.f,   1.f, 1.f,  // bottom right triangle
-        -1.f, -1.f,   1.f,  1.f,  -1.f, 1.f   // top left triangle
+        // Bottom right triangle
+        -1.f, -1.f,   1.f, -1.f,   1.f, 1.f,
+        // Top left triangle
+        -1.f, -1.f,   1.f,  1.f,  -1.f, 1.f
     };
-    glBufferData(
-        GL_ARRAY_BUFFER,
+    glNamedBufferStorage(
+        vbo,
         Vertices.size() * sizeof(float),
         Vertices.data(),
-        GL_STATIC_DRAW
+        GL_NONE_BIT
     );
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), nullptr);
-    glBindVertexArray(0);
 
     ShaderManager::instance().addShaderProgram("xform", VertexShader, FragmentShader);
     const ShaderProgram& prog = ShaderManager::instance().shaderProgram("xform");
-    prog.bind();
-
-    glUniform1i(glGetUniformLocation(prog.id(), "tex"), 0);
-
-    prog.unbind();
+    glProgramUniform1i(prog.id(), glGetUniformLocation(prog.id(), "tex"), 0);
 }
 
 void cleanup() {
@@ -281,13 +294,14 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    Engine::Callbacks callbacks;
-    callbacks.initOpenGL = initOGL;
-    callbacks.postSyncPreDraw = postSyncPreDraw;
-    callbacks.draw = draw;
-    callbacks.draw2D = draw2D;
-    callbacks.cleanup = cleanup;
-    callbacks.keyboard = keyboard;
+    const Engine::Callbacks callbacks = {
+        .initOpenGL = initOGL,
+        .postSyncPreDraw = postSyncPreDraw,
+        .draw = draw,
+        .draw2D = draw2D,
+        .cleanup = cleanup,
+        .keyboard = keyboard
+    };
 
     try {
         Engine::create(cluster, callbacks, config);

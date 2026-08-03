@@ -2,13 +2,12 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
 #include <sgct/trackingdevice.h>
 
-#include <sgct/clustermanager.h>
 #include <sgct/engine.h>
 #include <sgct/format.h>
 #include <sgct/log.h>
@@ -21,6 +20,8 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <algorithm>
+#include <cstring>
+#include <utility>
 
 namespace sgct {
 
@@ -68,7 +69,7 @@ void TrackingDevice::setSensorTransform(vec3 vec, quat rot) {
 
     const glm::mat4 parentTrans = glm::make_mat4(parent->transform().values.data());
 
-    // create matrixes
+    // Create matrixes
     const glm::mat4 sensorTransMat = glm::translate(
         glm::mat4(1.f),
         glm::make_vec3(&vec.x)
@@ -88,7 +89,7 @@ void TrackingDevice::setSensorTransform(vec3 vec, quat rot) {
         _worldTransformPrevious = std::move(_worldTransform);
         const glm::mat4 m = parentTrans * sensorTransMat * sensorRotMat *
                             glm::make_mat4(_deviceTransform.values.data());
-        std::memcpy(&_worldTransform, glm::value_ptr(m), 16 * sizeof(float));
+        std::memcpy(_worldTransform.values.data(), glm::value_ptr(m), 16 * sizeof(float));
     }
     setTrackerTimeStamp();
 }
@@ -119,7 +120,7 @@ void TrackingDevice::setAnalogValue(const double* array, int size) {
 }
 
 void TrackingDevice::setOrientation(float xRot, float yRot, float zRot) {
-    // create rotation quaternion based on x, y, z rotations
+    // Create rotation quaternion based on x, y, z rotations
     glm::quat rotQuat = glm::quat(1.f, 0.f, 0.f, 0.f);
     rotQuat = glm::rotate(rotQuat, glm::radians(xRot), glm::vec3(1.f, 0.f, 0.f));
     rotQuat = glm::rotate(rotQuat, glm::radians(yRot), glm::vec3(0.f, 1.f, 0.f));
@@ -164,7 +165,11 @@ void TrackingDevice::calculateTransform() {
         glm::mat4(1.f),
         glm::make_vec3(&_offset.x)) * glm::mat4_cast(glm::make_quat(&_orientation.x)
     );
-    std::memcpy(&_deviceTransform, glm::value_ptr(transMat), 16 * sizeof(float));
+    std::memcpy(
+        _deviceTransform.values.data(),
+        glm::value_ptr(transMat),
+        16 * sizeof(float)
+    );
 }
 
 int TrackingDevice::sensorId() const {

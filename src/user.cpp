@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -47,14 +47,14 @@ void User::setOrientation(float x, float y, float z) {
     const glm::mat4 trans = glm::translate(glm::mat4(1.f), glm::make_vec3(&_posMono.x));
     const glm::mat4 c =
         trans * glm::eulerAngleX(x) * glm::eulerAngleY(y) * glm::eulerAngleZ(z);
-    std::memcpy(&_transform, glm::value_ptr(c), sizeof(sgct::mat4));
+    std::memcpy(_transform.values.data(), glm::value_ptr(c), sizeof(sgct::mat4));
     updateEyeTransform();
 }
 
 void User::setOrientation(quat q) {
     const glm::mat4 trans = glm::translate(glm::mat4(1.f), glm::make_vec3(&_posMono.x));
     const glm::mat4 c = trans * glm::mat4_cast(glm::make_quat(&q.x));
-    std::memcpy(&_transform, glm::value_ptr(c), sizeof(sgct::mat4));
+    std::memcpy(_transform.values.data(), glm::value_ptr(c), sizeof(sgct::mat4));
     updateEyeTransform();
 }
 

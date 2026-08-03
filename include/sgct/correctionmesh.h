@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,15 +10,14 @@
 #define __SGCT__CORRECTION_MESH__H__
 
 #include <sgct/sgctexports.h>
+
 #include <filesystem>
 #include <optional>
-#include <vector>
 
 namespace sgct {
 
-class BaseViewport;
-
 namespace correction { struct Buffer; }
+class BaseViewport;
 
 /**
  * Helper class for reading and rendering a correction mesh. A correction mesh is used for
@@ -33,6 +32,9 @@ public:
      * \param parent The pointer to parent viewport
      * \param needsMaskGeometry If `true`, a separate geometry to applying blend masks is
      *        loaded
+     * \param textureRenderMode Only used if the loaded mesh is a `pfm` mesh. If `true`
+     *        a single mesh for one eye is loaded from the file. If `false`, two meshes,
+     *        one for the left and one for the right eye are loaded
      *
      * \throw std::runtime_error if mesh was not loaded successfully
      */

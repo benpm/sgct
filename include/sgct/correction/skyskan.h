@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,12 +10,14 @@
 #define __SGCT__CORRECTION_SKYSKAN__H__
 
 #include <sgct/sgctexports.h>
-#include <sgct/correction/buffer.h>
+
 #include <filesystem>
 
 namespace sgct { class BaseViewport; }
 
 namespace sgct::correction {
+
+struct Buffer;
 
 SGCT_EXPORT Buffer generateSkySkanMesh(const std::filesystem::path& meshPath,
     BaseViewport& parent);

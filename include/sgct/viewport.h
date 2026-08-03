@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -11,14 +11,16 @@
 
 #include <sgct/sgctexports.h>
 #include <sgct/baseviewport.h>
+
 #include <sgct/correctionmesh.h>
+#include <sgct/window.h>
+#include <cstdint>
 #include <filesystem>
 #include <memory>
-#include <string>
-#include <vector>
 
 namespace sgct {
 
+namespace config { struct Viewport; }
 class NonLinearProjection;
 
 /**
@@ -30,7 +32,7 @@ public:
     ~Viewport() override;
 
     void initialize(vec2 size, bool hasStereo, unsigned int internalFormat,
-        unsigned int format, unsigned int type, uint8_t samples);
+        uint8_t samples);
 
     void loadData();
 

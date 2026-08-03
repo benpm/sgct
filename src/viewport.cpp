@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,9 +10,11 @@
 
 #include <sgct/clustermanager.h>
 #include <sgct/config.h>
+#include <sgct/definitions.h>
+#include <sgct/format.h>
 #include <sgct/log.h>
+#include <sgct/math.h>
 #include <sgct/profiling.h>
-#include <sgct/screencapture.h>
 #include <sgct/texturemanager.h>
 #include <sgct/projection/cubemap.h>
 #include <sgct/projection/cylindrical.h>
@@ -20,9 +22,10 @@
 #include <sgct/projection/fisheye.h>
 #include <sgct/projection/nonlinearprojection.h>
 #include <sgct/projection/sphericalmirror.h>
-#include <algorithm>
-#include <array>
+#include <cassert>
 #include <optional>
+#include <stdexcept>
+#include <utility>
 #include <variant>
 
 namespace {
@@ -56,9 +59,9 @@ Viewport::Viewport(const config::Viewport& viewport, const Window& parent)
     if (viewport.user) {
         User* user = ClusterManager::instance().user(*viewport.user);
         if (!user) {
-            Log::Warning(
-                std::format("Could not find user with name '{}'", *viewport.user)
-            );
+            Log::Warning(std::format(
+                "Could not find user with name '{}'", *viewport.user
+            ));
         }
 
         // If the user name is not empty, the User better exists
@@ -109,7 +112,7 @@ Viewport::Viewport(const config::Viewport& viewport, const Window& parent)
             _nonLinearProjection =
                 std::make_unique<SphericalMirrorProjection>(p, _parent, *_user);
         },
-        [this]([[maybe_unused]] const config::CubemapProjection& p) {
+        [this](const config::CubemapProjection& p) {
             _nonLinearProjection =
                 std::make_unique<CubemapProjection>(p, _parent, *_user);
         },
@@ -133,11 +136,11 @@ Viewport::Viewport(const config::Viewport& viewport, const Window& parent)
 Viewport::~Viewport() = default;
 
 void Viewport::initialize(vec2 size, bool hasStereo, unsigned int internalFormat,
-                          unsigned int format, unsigned int type, uint8_t samples)
+                          uint8_t samples)
 {
     if (_nonLinearProjection) {
         _nonLinearProjection->setStereo(hasStereo);
-        _nonLinearProjection->initialize(internalFormat, format, type, samples);
+        _nonLinearProjection->initialize(internalFormat, samples);
         _nonLinearProjection->update(std::move(size));
     }
 }

@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -42,36 +42,44 @@ namespace {
     double currentTime(0.0);
 
     constexpr std::string_view vertexShader = R"(
-  #version 330 core
+  #version 460 core
 
-  layout(location = 0) in vec2 texCoords;
-  layout(location = 1) in vec3 normals;
-  layout(location = 2) in vec3 vertPositions;
+  layout(location = 0) in vec2 in_texCoords;
+  layout(location = 1) in vec3 in_normal;
+  layout(location = 2) in vec3 in_vertPosition;
+
+  out Data {
+    vec2 texCoords;
+  } out_data;
 
   uniform mat4 mvp;
-  out vec2 uv;
+
 
   void main() {
-    gl_Position =  mvp * vec4(vertPositions, 1.0);
-    uv = texCoords;
+    gl_Position =  mvp * vec4(in_vertPosition, 1.0);
+    out_data.texCoords = in_texCoords;
   })";
 
     constexpr std::string_view fragmentShader = R"(
-  #version 330 core
+  #version 460 core
+
+  in Data {
+    vec2 texCoords;
+  } in_data;
+
+  out vec4 out_color;
 
   uniform sampler2D tex;
 
-  in vec2 uv;
-  out vec4 color;
 
-  void main() { color = texture(tex, uv); }
+  void main() { out_color = texture(tex, in_data.texCoords); }
 )";
 } // namespace
 
 using namespace sgct;
 
 void readImage(unsigned char* data, int len) {
-    std::unique_lock lk(imageMutex);
+    const std::unique_lock lock(imageMutex);
 
     std::unique_ptr<Image> img = std::make_unique<Image>();
     try {
@@ -87,7 +95,7 @@ void startDataTransfer() {
     int id = lastPackage;
     id++;
 
-    // make sure to keep within bounds
+    // Make sure to keep within bounds
     if (static_cast<int>(imagePaths.size()) <= id) {
         return;
     }
@@ -97,7 +105,7 @@ void startDataTransfer() {
     lastPackage = imageCounter - 1;
 
     for (int i = id; i < imageCounter; i++) {
-        // load from file
+        // Load from file
         const std::string& p = imagePaths[static_cast<size_t>(i)];
 
         std::ifstream file(p.c_str(), std::ios::binary);
@@ -115,7 +123,7 @@ void startDataTransfer() {
 }
 
 void uploadTexture() {
-    std::unique_lock lk(imageMutex);
+    const std::unique_lock lock(imageMutex);
 
     if (transImages.empty()) {
         return;
@@ -124,15 +132,14 @@ void uploadTexture() {
 
     for (size_t i = 0; i < transImages.size(); i++) {
         if (!transImages[i]) {
-            // if invalid load
+            // If invalid load
             texIds.push_back(0);
             continue;
         }
 
-        // create texture
+        // Create texture
         GLuint tex;
-        glGenTextures(1, &tex);
-        glBindTexture(GL_TEXTURE_2D, tex);
+        glCreateTextures(GL_TEXTURE_2D, 1, &tex);
         glPixelStorei(GL_PACK_ALIGNMENT, 1);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
@@ -162,23 +169,19 @@ void uploadTexture() {
 
         GLenum format = (bpc == 1 ? GL_UNSIGNED_BYTE : GL_UNSIGNED_SHORT);
 
+        glTextureParameteri(tex, GL_TEXTURE_BASE_LEVEL, 0);
+        glTextureParameteri(tex, GL_TEXTURE_MAX_LEVEL, 0);
+
+        glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+        glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        glTextureParameteri(tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+        glTextureParameteri(tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
         const GLsizei width = transImages[i]->size().x;
         const GLsizei height = transImages[i]->size().y;
         unsigned char* data = transImages[i]->data();
-        glTexStorage2D(GL_TEXTURE_2D, 1, internalformat, width, height);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, width, height, type, format, data);
-
-        // Disable mipmaps
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, 0);
-
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-        // unbind
-        glBindTexture(GL_TEXTURE_2D, 0);
+        glTextureStorage2D(tex, 1, internalformat, width, height);
+        glTextureSubImage2D(tex, 0, 0, 0, width, height, type, format, data);
 
         Log::Info(std::format(
             "Texture id %d loaded ({}x{}x{})",
@@ -191,8 +194,6 @@ void uploadTexture() {
     }
 
     transImages.clear();
-    glFinish();
-
     glfwMakeContextCurrent(nullptr);
 }
 
@@ -201,12 +202,12 @@ void threadWorker() {
         const bool trans = transfer;
         const bool serverDone = serverUploadDone;
         const bool clientDone = clientsUploadDone;
-        // runs only on master
+        // Runs only on master
         if (trans && !serverDone && !clientDone) {
             startDataTransfer();
             transfer = false;
 
-            // load textures on master
+            // Load textures on master
             uploadTexture();
             serverUploadDone = true;
 
@@ -230,15 +231,13 @@ void draw(const RenderData& data) {
 
     const mat4& mvp = data.modelViewProjectionMatrix;
 
-    glActiveTexture(GL_TEXTURE0);
-
     if ((static_cast<int>(texIds.size()) > (texIndex + 1)) &&
         data.frustumMode == FrustumMode::StereoRight)
     {
-        glBindTexture(GL_TEXTURE_2D, texIds[texIndex + 1]);
+        glBindTextureUnit(0, texIds[texIndex + 1]);
     }
     else {
-        glBindTexture(GL_TEXTURE_2D, texIds[texIndex]);
+        glBindTextureUnit(0, texIds[texIndex]);
     }
 
     ShaderManager::instance().shaderProgram("xform").bind();
@@ -254,11 +253,11 @@ void preSync() {
     if (Engine::instance().isMaster()) {
         currentTime = time();
 
-        // if texture is uploaded then iterate the index
+        // If texture is uploaded then iterate the index
         if (serverUploadDone && clientsUploadDone) {
             numSyncedTex = static_cast<int32_t>(texIds.size());
 
-            // only iterate up to the first new image, even if multiple images was added
+            // Only iterate up to the first new image, even if multiple images was added
             texIndex = numSyncedTex - serverUploadCount;
 
             serverUploadDone = false;
@@ -281,7 +280,7 @@ void initOGL(GLFWwindow* win) {
         Log::Info("Failed to create loader context");
     }
 
-    // restore to normal
+    // Restore to normal
     glfwMakeContextCurrent(sharedWindow);
 
     if (Engine::instance().isMaster()) {
@@ -292,15 +291,13 @@ void initOGL(GLFWwindow* win) {
 
     // Set up backface culling
     glCullFace(GL_BACK);
-    // our polygon winding is clockwise since we are inside of the dome
+    // Our polygon winding is clockwise since we are inside of the dome
     glFrontFace(GL_CW);
 
     ShaderManager::instance().addShaderProgram("xform", vertexShader, fragmentShader);
     const ShaderProgram& prog = ShaderManager::instance().shaderProgram("xform");
-    prog.bind();
     matrixLoc = glGetUniformLocation(prog.id(), "mvp");
-    glUniform1i(glGetUniformLocation(prog.id(), "tex"), 0);
-    prog.unbind();
+    glProgramUniform1i(prog.id(), glGetUniformLocation(prog.id(), "tex"), 0);
 }
 
 std::vector<std::byte> encode() {
@@ -384,7 +381,7 @@ void dataTransferDecoder(void* receivedData, int receivedLength, int packageId,
 
     lastPackage = packageId;
 
-    // read the image on slave
+    // Read the image on slave
     readImage(reinterpret_cast<unsigned char*>(receivedData), receivedLength);
     uploadTexture();
 }
@@ -419,10 +416,10 @@ void drop(const std::vector<std::string_view>& paths) {
     if (Engine::instance().isMaster()) {
         std::vector<std::string> pathStrings;
         for (const std::string_view path : paths) {
-            // simply pick the first path to transmit
+            // Simply pick the first path to transmit
             std::string tmpStr = std::string(path);
 
-            // transform to lowercase
+            // Transform to lowercase
             std::transform(
                 tmpStr.begin(),
                 tmpStr.end(),
@@ -433,12 +430,12 @@ void drop(const std::vector<std::string_view>& paths) {
             pathStrings.push_back(tmpStr);
         }
 
-        // sort in alphabetical order
+        // Sort in alphabetical order
         std::sort(pathStrings.begin(), pathStrings.end());
 
         serverUploadCount = 0;
 
-        // iterate all drop paths
+        // Iterate all drop paths
         for (size_t i = 0; i < pathStrings.size(); i++) {
             std::string tmpStr = pathStrings[i];
 
@@ -446,14 +443,14 @@ void drop(const std::vector<std::string_view>& paths) {
             const size_t foundJpeg = tmpStr.find(".jpeg");
             if (foundJpg != std::string::npos || foundJpeg != std::string::npos) {
                 imagePaths.push_back(pathStrings[i]);
-                transfer = true; // tell transfer thread to start processing data
+                transfer = true; // Tell transfer thread to start processing data
                 serverUploadCount++;
             }
 
             const size_t foundPng = tmpStr.find(".png");
             if (foundPng != std::string::npos) {
                 imagePaths.push_back(pathStrings[i]);
-                transfer = true; // tell transfer thread to start processing data
+                transfer = true; // Tell transfer thread to start processing data
                 serverUploadCount++;
             }
         }
@@ -468,19 +465,20 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    Engine::Callbacks callbacks;
-    callbacks.initOpenGL = initOGL;
-    callbacks.preSync = preSync;
-    callbacks.encode = encode;
-    callbacks.decode = decode;
-    callbacks.postSyncPreDraw = postSyncPreDraw;
-    callbacks.draw = draw;
-    callbacks.cleanup = cleanup;
-    callbacks.keyboard = keyboard;
-    callbacks.drop = drop;
-    callbacks.dataTransferDecode = dataTransferDecoder;
-    callbacks.dataTransferStatus = dataTransferStatus;
-    callbacks.dataTransferAcknowledge = dataTransferAcknowledge;
+    const Engine::Callbacks callbacks = {
+        .initOpenGL = initOGL,
+        .preSync = preSync,
+        .postSyncPreDraw = postSyncPreDraw,
+        .draw = draw,
+        .cleanup = cleanup,
+        .encode = encode,
+        .decode = decode,
+        .dataTransferDecode = dataTransferDecoder,
+        .dataTransferStatus = dataTransferStatus,
+        .dataTransferAcknowledge = dataTransferAcknowledge,
+        .keyboard = keyboard,
+        .drop = drop
+    };
 
     try {
         Engine::create(cluster, callbacks, config);

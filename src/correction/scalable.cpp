@@ -2,24 +2,28 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
 #include <sgct/correction/scalable.h>
 
 #include <sgct/baseviewport.h>
+#include <sgct/correction/buffer.h>
 #include <sgct/engine.h>
 #include <sgct/error.h>
 #include <sgct/format.h>
 #include <sgct/log.h>
 #include <sgct/opengl.h>
 #include <sgct/profiling.h>
-#include <sgct/user.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <fstream>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <vector>
 
 namespace {
     struct Data {
@@ -99,18 +103,14 @@ namespace sgct::correction {
 Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& parent) {
     ZoneScoped;
 
-    // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-    // formatting std::filesystem::path
-    Log::Info(std::format("Reading scalable mesh data from '{}'", path.string()));
+    Log::Info(std::format("Reading scalable mesh data from '{}'", path));
 
     std::ifstream file = std::ifstream(path);
     if (!file.good()) {
-        // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-        // formatting std::filesystem::path
         throw Error(
             Error::Component::Scalable,
             2060,
-            std::format("Failed to open '{}'", path.string())
+            std::format("Failed to open '{}'", path)
         );
     }
 
@@ -131,11 +131,9 @@ Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& par
 
         if (first == "OPENMESH") {
             if (rest != "Version 1.1") {
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
                 Log::Warning(std::format(
                     "Found {} in mesh '{}' but expected Version 1.1 so the loading might "
-                    "misbehave", rest, path.string()
+                    "misbehave", rest, path
                 ));
             }
         }
@@ -149,31 +147,25 @@ Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& par
         }
         else if (first == "MAPPING") {
             if (rest != "NORMALIZED") {
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
                 Log::Warning(std::format(
                     "Found mapping '{}' in mesh '{}' but only 'NORMALIZED' is supported",
-                    rest, path.string()
+                    rest, path
                 ));
             }
         }
         else if (first == "SAMPLING") {
             if (rest != "LINEAR") {
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
                 Log::Warning(std::format(
                     "Found sampling '{}' in mesh '{}' but only 'LINEAR' is supported",
-                    rest, path.string()
+                    rest, path
                 ));
             }
         }
         else if (first == "PROJECTION") {
             if (rest != "PERSPECTIVE") {
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
                 Log::Warning(std::format(
                     "Found projection '{}' in mesh '{}' but only 'PERSPECTIVE' is "
-                    "supported", rest, path.string()
+                    "supported", rest, path
                 ));
             }
         }
@@ -235,11 +227,9 @@ Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& par
         else if (first == "SUBVERSION") {
             const int version = std::stoi(std::string(rest));
             if (version != 5) {
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
                 Log::Warning(std::format(
                     "Found subversion {} in mesh '{}' but only version 5 is tested",
-                    version, path.string()
+                    version, path
                 ));
             }
         }
@@ -247,11 +237,9 @@ Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& par
             const float gamma = std::stof(std::string(rest));
             if (gamma != data.gamma) {
                 data.gamma = gamma;
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
                 Log::Warning(std::format(
                     "Found GAMMA value of {} in mesh '{}' we do not support per-viewport "
-                    "gamma values", data.gamma, path.string()
+                    "gamma values", data.gamma, path
                 ));
             }
         }
@@ -261,22 +249,18 @@ Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& par
         else if (first == "USE_SPHERE_SAMPLE_COORDINATE_SYSTEM") {
             const bool useSphereSampling = std::stoi(std::string(rest)) != 0;
             if (useSphereSampling) {
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
                 Log::Warning(std::format(
                     "Found request to use Sphere Sample Coordinate System in mesh {} "
-                    "but we do not support this", path.string()
+                    "but we do not support this", path
                 ));
             }
         }
         else if (first == "FRUSTUM_EULER_ANGLES") {
             data.frustumEulerAngles.useAngles = std::stoi(std::string(rest)) != 0;
             if (data.frustumEulerAngles.useAngles) {
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
                 Log::Warning(std::format(
                     "Enabled frustum euler angles in mesh '{}' but we do not know how "
-                    "these work, yet", path.string()
+                    "these work, yet", path
                 ));
             }
         }
@@ -295,36 +279,30 @@ Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& par
         else if (first == "APPLY_MASK") {
             data.applyMask = std::stoi(std::string(rest)) != 0;
             if (data.applyMask) {
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
                 Log::Warning(std::format(
                     "Mesh '{}' requested to apply a mask. Currently this is handled "
                     "outside the mesh by specifying a 'mask' attribute on the 'Viewport' "
-                    "instead", path.string()
+                    "instead", path
                 ));
             }
         }
         else if (first == "APPLY_BLACK_LEVEL") {
             data.applyBlackLevel = std::stoi(std::string(rest)) != 0;
             if (data.applyBlackLevel) {
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
                 Log::Warning(std::format(
                     "Mesh '{}' requested to apply a blacklevel image. Currently this is "
                     "handled outside the mesh by specifying a 'BlackLevelMask' attribute "
-                    "on the 'Viewport' instead", path.string()
+                    "on the 'Viewport' instead", path
                 ));
             }
         }
         else if (first == "APPLY_COLOR") {
             data.applyColor = std::stoi(std::string(rest)) != 0;
             if (data.applyBlackLevel) {
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
                 Log::Warning(std::format(
                     "Mesh '{}' requested to apply an overlay image. Currently this is "
                     "handled outside the mesh by specifying an 'overlay' attribute on "
-                    "the 'Viewport' instead", path.string()
+                    "the 'Viewport' instead", path
                 ));
             }
         }
@@ -332,13 +310,10 @@ Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& par
             // Face
             size_t sep = rest.find(' ');
             if (sep == std::string_view::npos) {
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
                 throw Error(
                     Error::Component::Scalable, 2035,
                     std::format(
-                        "Illegal formatting of face in file '{}' in line {}",
-                        path.string(), line
+                        "Illegal formatting of face in file '{}' in line {}", path, line
                     )
                 );
             }
@@ -347,13 +322,10 @@ Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& par
 
             sep = rest.find(' ');
             if (sep == std::string_view::npos) {
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
                 throw Error(
                     Error::Component::Scalable, 2035,
                     std::format(
-                        "Illegal formatting of face in file '{}' in line {}",
-                        path.string(), line
+                        "Illegal formatting of face in file '{}' in line {}", path, line
                     )
                 );
             }
@@ -362,13 +334,10 @@ Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& par
 
             sep = rest.find(' ');
             if (sep == std::string_view::npos) {
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
                 throw Error(
                     Error::Component::Scalable, 2035,
                     std::format(
-                        "Illegal formatting of face in file '{}' in line {}",
-                        path.string(), line
+                        "Illegal formatting of face in file '{}' in line {}", path, line
                     )
                 );
             }
@@ -388,12 +357,10 @@ Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& par
                 [[maybe_unused]] const float dummy = std::stof(std::string(first));
             }
             catch (const std::invalid_argument&) {
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
                 Log::Warning(std::format(
                     "Unknown key {} found in scalable mesh '{}'. Please report usage of "
                     "this key, preferably with an example, to the SGCT developers",
-                    first, path.string()
+                    first, path
                 ));
                 continue;
             }
@@ -403,13 +370,10 @@ Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& par
 
             size_t sep = rest.find(' ');
             if (sep == std::string_view::npos) {
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
                 throw Error(
                     Error::Component::Scalable, 2036,
                     std::format(
-                        "Illegal formatting of vertex in file '{}' in line {}",
-                        path.string(), line
+                        "Illegal formatting of vertex in file '{}' in line {}", path, line
                     )
                 );
             }
@@ -418,13 +382,10 @@ Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& par
 
             sep = rest.find(' ');
             if (sep == std::string_view::npos) {
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
                 throw Error(
                     Error::Component::Scalable, 2036,
                     std::format(
-                        "Illegal formatting of vertex in file '{}' in line {}",
-                        path.string(), line
+                        "Illegal formatting of vertex in file '{}' in line {}", path, line
                     )
                 );
             }
@@ -433,13 +394,10 @@ Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& par
 
             sep = rest.find(' ');
             if (sep == std::string_view::npos) {
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
                 throw Error(
                     Error::Component::Scalable, 2036,
                     std::format(
-                        "Illegal formatting of vertex in file '{}' in line {}",
-                        path.string(), line
+                        "Illegal formatting of vertex in file '{}' in line {}", path, line
                     )
                 );
             }
@@ -447,15 +405,10 @@ Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& par
             rest = rest.substr(sep + 1);
             sep = rest.find(' ');
             if (sep == std::string_view::npos) {
-                // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-                // formatting std::filesystem::path
-                throw Error(
-                    Error::Component::Scalable, 2036,
-                    std::format(
-                        "Illegal formatting of vertex in file '{}' in line {}",
-                        path.string(), line
-                    )
-                );
+                Log::Warning(std::format(
+                    "Illegal formatting of vertex in scalable mesh file '{}' in line {}",
+                    path, line
+                ));
             }
             const std::string_view t = rest.substr(0, sep);
 
@@ -471,8 +424,8 @@ Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& par
 
 
     if (data.perspective.hasFov) {
-        // pitch, yaw, roll.  degrees -> radians
-        // if we don't have a direction, all these values will be 0 anyway
+        // Pitch, yaw, roll:  degrees -> radians
+        // If we don't have a direction, all these values will be 0 anyway
         const glm::quat q = glm::quat(glm::vec3(
             glm::radians(data.perspective.direction.pitch),
             glm::radians(data.perspective.direction.yaw),
@@ -500,11 +453,9 @@ Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& par
     if (data.nVertices != static_cast<int>(data.vertices.size()) ||
         data.nFaces != static_cast<int>(data.faces.size()))
     {
-        // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-        // formatting std::filesystem::path
         throw Error(
             Error::Component::Scalable, 2061,
-            std::format("Incorrect mesh data geometry in file '{}'", path.string())
+            std::format("Incorrect mesh data geometry in file '{}'", path)
         );
     }
 
@@ -530,9 +481,7 @@ Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& par
         v.g = vertex.intensity / 255.f;
         v.b = vertex.intensity / 255.f;
         v.a = 1.f;
-        //v.s = (1.f - vertex.s) * parent.size().x + parent.position().x;
         v.s = (1.f - vertex.t) * parent.size().x + parent.position().x;
-        //v.t = (1.f - vertex.t) * parent.size().x + parent.position().x;
         v.t = (1.f - vertex.s) * parent.size().x + parent.position().x;
 
         buf.vertices.push_back(v);

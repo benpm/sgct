@@ -2,13 +2,14 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
 #include <sgct/shareddata.h>
 
 #include <sgct/log.h>
+#include <sgct/mutexes.h>
 #include <sgct/profiling.h>
 #include <zlib.h>
 #include <cstring>
@@ -35,9 +36,9 @@ SharedData::SharedData() {
 
     _dataBlock.reserve(DefaultSize);
 
-    // fill rest of header with Network::DefaultId
+    // Fill rest of header with Network::DefaultId
     std::memset(_headerSpace.data(), Network::DefaultId, Network::HeaderSize);
-    _headerSpace[0] = std::byte { Network::DataId };
+    _headerSpace[0] = static_cast<std::byte>(Network::DataId);
 }
 
 void SharedData::setEncodeFunction(std::function<std::vector<std::byte>()> function) {
@@ -54,9 +55,9 @@ void SharedData::decode(const char* receivedData, int receivedLength) {
     ZoneScoped;
 
     {
-        const std::unique_lock lk(mutex::DataSync);
+        const std::unique_lock lock(mutex::DataSync);
 
-        // reset
+        // Reset
         _dataBlock.clear();
 
         if (receivedLength > static_cast<int>(_dataBlock.capacity())) {
@@ -83,7 +84,7 @@ void SharedData::encode() {
     ZoneScoped;
 
     {
-        const std::unique_lock lk(mutex::DataSync);
+        const std::unique_lock lock(mutex::DataSync);
         _dataBlock.clear();
 
         _dataBlock.insert(

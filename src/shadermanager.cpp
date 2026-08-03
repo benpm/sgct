@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -13,6 +13,7 @@
 #include <sgct/log.h>
 #include <sgct/opengl.h>
 #include <algorithm>
+#include <utility>
 
 #define Err(code, msg) Error(Error::Component::Shader, code, msg)
 
@@ -49,7 +50,7 @@ void ShaderManager::addShaderProgram(std::string name, std::string_view vertexSr
         );
     }
 
-    // If shader don't exist, create it and add to container
+    // If the shader doen't exist, create it and add to container
     ShaderProgram sp = ShaderProgram(std::move(name));
     sp.addVertexShader(vertexSrc);
     sp.addFragmentShader(fragmentSrc);

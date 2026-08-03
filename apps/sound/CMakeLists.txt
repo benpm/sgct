@@ -2,7 +2,7 @@
 # SGCT                                                                                   #
 # Simple Graphics Cluster Toolkit                                                        #
 #                                                                                        #
-# Copyright (c) 2012-2025                                                                #
+# Copyright (c) 2012-2026                                                                #
 # For conditions of distribution and use, see copyright notice in LICENSE.md             #
 ##########################################################################################
 
@@ -20,11 +20,11 @@ find_path(ALUT_INCLUDE_DIRECTORY NAMES AL/alut.h REQUIRED)
 
 find_package(OpenAL REQUIRED)
 
-target_include_directories(soundPRIVATE ${OPENAL_INCLUDE_DIRECTORY} ${ALUT_INCLUDE_DIRECTORY})
-target_link_libraries(sound PRIVATE ${OPENAL_LIBRARY} ${ALUT_LIBRARY})
+target_include_directories(sound PRIVATE ${ALUT_INCLUDE_DIRECTORY})
+target_link_libraries(sound PRIVATE OpenAL:::OpenAL ${ALUT_LIBRARY})
 
 add_custom_command(
-  TARGET soundExample POST_BUILD
+  TARGET sound POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
   "${CMAKE_CURRENT_SOURCE_DIR}/file1.wav"
 

@@ -2,13 +2,14 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
 #include <sgct/commandline.h>
 
 #include <iostream>
+#include <string_view>
 
 namespace sgct {
 
@@ -66,7 +67,7 @@ Configuration parseArguments(std::vector<std::string>& arg) {
             arg.erase(arg.begin() + i);
         }
         else if (arg[i] == "--number-capture-threads" && arg.size() > (i + 1)) {
-            config.nCaptureThreads = std::stoi(arg[i + 1]);
+            config.nCaptureThreads = std::max(std::stoi(arg[i + 1]), 1);
             arg.erase(arg.begin() + i, arg.begin() + i + 2);
         }
         else if (arg[i] == "--screenshot-path") {

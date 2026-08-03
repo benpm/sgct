@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,10 +10,11 @@
 #define __SGCT__NONLINEARPROJECTION__H__
 
 #include <sgct/sgctexports.h>
+
 #include <sgct/baseviewport.h>
-#include <sgct/shaderprogram.h>
+#include <sgct/definitions.h>
+#include <cstdint>
 #include <memory>
-#include <string>
 
 namespace sgct {
 
@@ -27,7 +28,7 @@ class SGCT_EXPORT NonLinearProjection {
 public:
     enum class InterpolationMode : uint8_t { Linear, Cubic };
 
-    NonLinearProjection(const Window& parent);
+    explicit NonLinearProjection(const Window& parent);
 
     virtual ~NonLinearProjection();
 
@@ -35,8 +36,7 @@ public:
      * Initialize the non-linear projection. The arguments should match the texture
      * settings for the parent window's FBO target.
      */
-    virtual void initialize(unsigned int internalFormat, unsigned int format,
-        unsigned int type, int nSamples);
+    virtual void initialize(unsigned int internalFormat, int nSamples);
 
     virtual void render(const BaseViewport& viewport, FrustumMode frustumMode) const = 0;
     virtual void renderCubemap(FrustumMode frustumMode) const = 0;
@@ -71,23 +71,20 @@ public:
     virtual void setUser(User& user);
 
     /**
-     * \return the resolution of the cubemap
+     * \return The resolution of the cubemap
      */
     ivec2 cubemapResolution() const;
 
 protected:
-    virtual void initTextures(unsigned int internalFormat, unsigned int format,
-        unsigned int type);
+    virtual void initTextures(unsigned int internalFormat);
     virtual void initFBO(unsigned int internalFormat, int nSamples);
     virtual void initVBO() = 0;
     virtual void initViewports() = 0;
     virtual void initShaders() = 0;
 
     void setupViewport(const BaseViewport& vp) const;
-    void generateMap(unsigned int& texture, unsigned int internalFormat,
-        unsigned int format, unsigned int type);
-    void generateCubeMap(unsigned int& texture, unsigned int internalFormat,
-        unsigned int format, unsigned int type);
+    void generateMap(unsigned int& texture, unsigned int internalFormat);
+    void generateCubeMap(unsigned int& texture, unsigned int internalFormat);
 
     void attachTextures(int face) const;
     void blitCubeFace(int face) const;

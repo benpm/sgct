@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,26 +10,34 @@
 #define __SGCT__ENGINE__H__
 
 #include <sgct/sgctexports.h>
+
 #include <sgct/actions.h>
 #include <sgct/callbackdata.h>
 #include <sgct/config.h>
-#include <sgct/definitions.h>
-#include <sgct/joystick.h>
 #include <sgct/keys.h>
+#include <sgct/math.h>
 #include <sgct/modifiers.h>
 #include <sgct/mouse.h>
 #include <sgct/window.h>
+#include <algorithm>
 #include <array>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
-#include <functional>
+#include <memory>
 #include <optional>
+#include <string>
+#include <string_view>
 #include <thread>
+#include <utility>
+#include <vector>
 
 namespace sgct {
 
 struct Configuration;
 class Node;
 class StatisticsRenderer;
+class User;
 
 /**
  * Loads the cluster information from the provided \p path. The \p path is a configuration
@@ -55,7 +63,6 @@ SGCT_EXPORT config::Cluster loadCluster(
  * \return The number of seconds since the program started
  */
 SGCT_EXPORT double time();
-
 
 /**
  * The Engine class is the central part of SGCT and handles most of the callbacks,
@@ -102,12 +109,12 @@ public:
         double avgDt() const;
 
         /**
-         * \return the minimum frame time (delta time) in the averaging window (seconds)
+         * \return The minimum frame time (delta time) in the averaging window (seconds)
          */
         double minDt() const;
 
         /**
-         * \return the maximum frame time (delta time) in the averaging window (seconds)
+         * \return The maximum frame time (delta time) in the averaging window (seconds)
          */
         double maxDt() const;
     };
@@ -142,7 +149,7 @@ public:
         /// before aborting
         float syncTimeout = 60.f;
 
-        struct SS{
+        struct SS {
             /// The location where the screenshots are being saved
             std::filesystem::path capturePath;
 
@@ -158,12 +165,10 @@ public:
             /// The prefix to be used for all screenshots
             std::string prefix;
 
-            /**
-             * Information about the screenshot limits. If there is no screenshot limit,
-             * this function returns `std::nullopt`. Otherwise the first component is the
-             * index of the first screenshot that will be rendered. The second component
-             * is the index of the last screenshot that will not be rendered anymore.
-             */
+            /// Information about the screenshot limits. If there is no screenshot limit,
+            /// this function returns `std::nullopt`. Otherwise the first component is the
+            /// index of the first screenshot that will be rendered. The second component
+            /// is the index of the last screenshot that will not be rendered anymore.
             std::optional<std::pair<uint64_t, uint64_t>> limits;
         } capture;
     };
@@ -174,8 +179,8 @@ public:
      */
     struct SGCT_EXPORT Callbacks {
         /// This function is called before the window is created (before OpenGL context is
-        /// created). At this stage the configuration file has been read and network
-        /// is initialized.
+        /// created). At this stage the configuration file has been read and network is
+        /// initialized
         void (*preWindow)() = nullptr;
 
         /// This function is called once before the starting the render loop and after
@@ -183,22 +188,21 @@ public:
         /// the shared context between all created windows
         void (*initOpenGL)(GLFWwindow*) = nullptr;
 
-        /// This function is called before the synchronization stage.
+        /// This function is called before the synchronization stage
         void (*preSync)() = nullptr;
 
-        /// This function is called once per frame after sync but before draw stage.
+        /// This function is called once per frame after sync but before draw stage
         void (*postSyncPreDraw)() = nullptr;
 
-        /// This function draws the scene and could be called several times per frame
-        /// as it's called once per viewport and once per eye if stereoscopy is used.
+        /// This function draws the scene and could be called several times per frame as
+        /// it's called once per viewport and once per eye if stereoscopy is used
         void (*draw)(const RenderData&) = nullptr;
 
         /// This function is be called after overlays and post effects has been drawn and
-        /// can used to render text and HUDs that will not be filtered or antialiased.
+        /// can used to render text and HUDs that will not be filtered or antialiased
         void (*draw2D)(const RenderData&) = nullptr;
 
-        /// This function is called after the draw stage but before the OpenGL buffer
-        /// swap.
+        /// This function is called after the draw stage but before the OpenGL buffer swap
         void (*postDraw)() = nullptr;
 
         /// This function is called to apply post-processing effects to the rendered frame.
@@ -212,44 +216,44 @@ public:
         void (*cleanup)() = nullptr;
 
         /// This function is called to encode all shared data that is sent to the
-        /// connected nodes in a clustered setup.
+        /// connected nodes in a clustered setup
         std::vector<std::byte> (*encode)() = nullptr;
 
-        /// This function is called by decode all shared data sent to us from the master
-        /// The parameter is the block of data that contains the data to be decoded.
+        /// This function is called by decode all shared data sent to us from the master.
+        /// The parameter is the block of data that contains the data to be decoded
         void (*decode)(const std::vector<std::byte>&) = nullptr;
 
-        /// This function is called when a TCP message is received.
+        /// This function is called when a TCP message is received
         void (*externalDecode)(const char*, int) = nullptr;
 
-        /// This function is called when the connection status changes.
+        /// This function is called when the connection status changes
         void (*externalStatus)(bool) = nullptr;
 
-        /// This function is called when a TCP message is received.
+        /// This function is called when a TCP message is received
         void (*dataTransferDecode)(void*, int, int, int) = nullptr;
 
-        /// This function is called when the connection status changes.
+        /// This function is called when the connection status changes
         void (*dataTransferStatus)(bool, int) = nullptr;
 
-        /// This function is called when data is successfully sent.
+        /// This function is called when data is successfully sent
         void (*dataTransferAcknowledge)(int, int) = nullptr;
 
-        /// This function sets the keyboard callback (GLFW wrapper) for all windows.
+        /// This function sets the keyboard callback (GLFW wrapper) for all windows
         void (*keyboard)(Key, Modifier, Action, int, Window*) = nullptr;
 
-        /// All windows are connected to this callback.
+        /// All windows are connected to this callback
         void (*character)(unsigned int, int, Window*) = nullptr;
 
-        /// This function sets the mouse button callback (GLFW wrapper) for all windows.
+        /// This function sets the mouse button callback (GLFW wrapper) for all windows
         void (*mouseButton)(MouseButton, Modifier, Action, Window*) = nullptr;
 
-        /// All windows are connected to this callback.
+        /// All windows are connected to this callback
         void (*mousePos)(double, double, Window*) = nullptr;
 
-        /// All windows are connected to this callback.
+        /// All windows are connected to this callback
         void (*mouseScroll)(double, double, Window*) = nullptr;
 
-        /// Drop files to any window. All windows are connected to this callback.
+        /// Drop files to any window. All windows are connected to this callback
         void (*drop)(const std::vector<std::string_view>&) = nullptr;
     };
 
@@ -537,19 +541,6 @@ private:
      * states that are necessary to run the Engine instance created by the constructor.
      */
     void initialize();
-
-    /**
-     * Creates and initializes all of the windows that are specified for the current Node.
-     * This function will call the Callbacks::preWindow callback for each window created
-     * before the OpenGL context has been created and initialized.
-     *
-     * \param majorVersion The major version for OpenGL that is requested
-     * \param minorVersion The minor version for OpenGL that is requested
-     *
-     * \pre \p majorVersion must be bigger than 0
-     * \pre \p minorVersion must be bigger than 0
-     */
-    void initWindows(int majorVersion, int minorVersion);
 
     /**
      * Locks the rendering thread for synchronization. Locks the clients until data is

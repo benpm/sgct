@@ -2,21 +2,22 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
 #include <sgct/correction/domeprojection.h>
 
+#include <sgct/correction/buffer.h>
 #include <sgct/error.h>
 #include <sgct/format.h>
 #include <sgct/log.h>
 #include <sgct/opengl.h>
 #include <sgct/profiling.h>
-#include <glm/glm.hpp>
 #include <scn/scan.h>
 #include <algorithm>
 #include <fstream>
+#include <string>
 
 namespace sgct::correction {
 
@@ -25,17 +26,13 @@ Buffer generateDomeProjectionMesh(const std::filesystem::path& path, const vec2&
 {
     ZoneScoped;
 
-    // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-    // formatting std::filesystem::path
-    Log::Info(std::format("Reading DomeProjection mesh data from '{}'", path.string()));
+    Log::Info(std::format("Reading DomeProjection mesh data from '{}'", path));
 
     std::ifstream meshFile = std::ifstream(path);
     if (!meshFile.good()) {
-        // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-        // formatting std::filesystem::path
         throw Error(
             Error::Component::DomeProjection, 2010,
-            std::format("Failed to open '{}'", path.string())
+            std::format("Failed to open '{}'", path)
         );
     }
 
@@ -51,25 +48,25 @@ Buffer generateDomeProjectionMesh(const std::filesystem::path& path, const vec2&
         if (r) {
             auto [x, y, u, v, col, row] = r->values();
 
-            // init to max intensity (opaque white)
+            // Init to max intensity (opaque white)
             Buffer::Vertex vertex;
             vertex.r = 1.f;
             vertex.g = 1.f;
             vertex.b = 1.f;
             vertex.a = 1.f;
 
-            // find dimensions of meshdata
+            // Find dimensions of meshdata
             nCols = std::max(nCols, col);
             nRows = std::max(nRows, row);
 
             x = std::clamp(x, 0.f, 1.f);
             y = std::clamp(y, 0.f, 1.f);
 
-            // convert to [-1, 1]
+            // Convert to [-1, 1]
             vertex.x = 2.f * (pos.x + x * size.x) - 1.f;
 
-            // (abock, 2019-08-30); I'm not sure why the y inversion happens
-            // here. It seems like a mistake, but who knows
+            // (abock, 2019-08-30); I'm not sure why the y inversion happens here. It
+            // seems like a mistake, but who knows
             vertex.y = 2.f * (pos.y + (1.f - y) * size.y) - 1.f;
 
             // scale to viewport coordinates
@@ -94,7 +91,7 @@ Buffer generateDomeProjectionMesh(const std::filesystem::path& path, const vec2&
             //  x----x
             // 0      1
 
-            // add one to actually store the dimensions instead of the largest index
+            // Add one to actually store the dimensions instead of the largest index
             const unsigned int i0 = r * (nCols + 1)+ c;
             const unsigned int i1 = r * (nCols + 1) + (c + 1);
             const unsigned int i2 = (r + 1) * (nCols + 1) + (c + 1);

@@ -2,11 +2,13 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
 #include <sgct/sgct.h>
+
+#include <sgct/joystick.h>
 
 #define GLFW_INCLUDE_NONE
 #include <GLFW/glfw3.h>
@@ -64,8 +66,9 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    Engine::Callbacks callbacks;
-    callbacks.draw2D = draw2D;
+    const Engine::Callbacks callbacks = {
+        .draw2D = draw2D
+    };
 
     try {
         Engine::create(cluster, callbacks, config);

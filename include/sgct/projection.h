@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,6 +10,7 @@
 #define __SGCT__PROJECTION__H__
 
 #include <sgct/sgctexports.h>
+
 #include <sgct/math.h>
 
 namespace sgct {

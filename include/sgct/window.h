@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,35 +10,44 @@
 #define __SGCT__WINDOW__H__
 
 #include <sgct/sgctexports.h>
+
+#include <sgct/definitions.h>
+#include <sgct/offscreenbuffer.h>
+#include <sgct/screencapture.h>
 #include <sgct/shaderprogram.h>
 #include <sgct/viewport.h>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
-#include <functional>
+#include <memory>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <vector>
+
+#ifdef SGCT_HAS_NDI
+#include <Processing.NDI.Lib.h>
+#include <Processing.NDI.Send.h>
+#include <Processing.NDI.Structs.h>
+#endif // SGCT_HAS_NDI
 
 struct GLFWwindow;
 
 #ifdef SGCT_HAS_SPOUT
 struct SPOUTLIBRARY;
-typedef SPOUTLIBRARY* SPOUTHANDLE;
+using SPOUTHANDLE = SPOUTLIBRARY*;
 #endif // SGCT_HAS_SPOUT
-
-#ifdef SGCT_HAS_NDI
-#include <Processing.NDI.Lib.h>
-#endif // SGCT_HAS_NDI
 
 namespace sgct {
 
 namespace config { struct Window; }
 
-class OffScreenBuffer;
-class ScreenCapture;
-
 class SGCT_EXPORT Window {
 public:
-    /// Different stereo modes used for rendering.
+    /**
+     * Different stereo modes used for rendering.
+     */
     enum class StereoMode : uint8_t {
         NoStereo = 0,
         Active,
@@ -117,7 +126,7 @@ public:
 
     /**
      * \return Get the scale value (relation between pixel and point size). Normally this
-     *         value is 1.f but 2.f on some retina computers.
+     *         value is 1.f but 2.f on some retina computers
      */
     vec2 scale() const;
 
@@ -127,9 +136,9 @@ public:
     float aspectRatio() const;
 
     /**
-     * \return Get the window resolution
+     * \return Get the window size
      */
-    ivec2 windowResolution() const;
+    ivec2 windowSize() const;
 
     /**
      * \return The pointer to GLFW window
@@ -341,7 +350,7 @@ private:
      *
      * \param prevWindow The source window whose content should be copied into the
      *        \p window
-     * \param viewport The viewport of the window that should be compied
+     * \param viewport The viewport of the window that should be copied
      * \param mode The frustum that should be used to copy the window contents
      *
      * \pre The \p prevWindow and \p window must be different Window objects
@@ -376,10 +385,10 @@ private:
     bool _isIconified = false;
     StereoMode _stereoMode;
     std::optional<ivec2> _windowPos;
-    std::optional<ivec2> _windowRes;
+    ivec2 _windowSize;
     ivec2 _framebufferRes;
 
-    std::optional<ivec2> _pendingWindowRes;
+    std::optional<ivec2> _pendingWindowSize;
     bool _windowResChanged = false;
     bool _hasFocus = false;
     bool _useFixResolution = false;
@@ -390,19 +399,22 @@ private:
     vec2 _scale = vec2{ 0.f, 0.f };
 
 #ifdef SGCT_HAS_SPOUT
-    bool _spoutEnabled;
-    std::string _spoutName;
-    SPOUTHANDLE _spoutHandle = nullptr;
+    struct {
+        bool enabled;
+        std::string name;
+        SPOUTHANDLE handle = nullptr;
+    } _spout;
 #endif // SGCT_HAS_SPOUT
 
 #ifdef SGCT_HAS_NDI
-    NDIlib_send_instance_t _ndiHandle = nullptr;
-    NDIlib_video_frame_v2_t _videoFrame;
-    std::string _ndiName;
-    std::string _ndiGroups;
-    std::vector<std::byte> _videoBufferPing;
-    std::vector<std::byte> _videoBufferPong;
-    std::vector<std::byte>* _currentVideoBuffer = &_videoBufferPing;
+    struct {
+        NDIlib_send_instance_t handle = nullptr;
+        NDIlib_video_frame_v2_t videoFrame;
+        std::string name;
+        std::string groups;
+        unsigned int pingPongPbo[3] = { 0, 0, 0 };
+        int currentFrame = 0;
+    } _ndi;
 #endif // SGCT_HAS_NDI
 
     const unsigned int _internalColorFormat;
@@ -450,7 +462,8 @@ private:
     } _scalableMesh;
 };
 
-config::Window createScalableConfiguration(const config::Window::Scalable& scalable);
+config::Window createScalableConfiguration(const config::Window::Scalable& scalable,
+    const config::Window& window);
 
 } // namespace sgct
 

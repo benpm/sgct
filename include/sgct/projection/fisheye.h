@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -12,9 +12,15 @@
 #include <sgct/sgctexports.h>
 #include <sgct/projection/nonlinearprojection.h>
 
-#include <sgct/callbackdata.h>
+#include <sgct/shaderprogram.h>
+#include <sgct/math.h>
 
 namespace sgct {
+
+namespace config { struct FisheyeProjection; }
+class BaseViewport;
+class User;
+class Window;
 
 /**
  * This class manages and renders non linear fisheye projections.

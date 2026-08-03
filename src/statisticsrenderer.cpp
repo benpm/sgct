@@ -2,22 +2,31 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
 #include <sgct/statisticsrenderer.h>
 
+#include <sgct/format.h>
 #include <sgct/opengl.h>
 #include <sgct/profiling.h>
+#include <sgct/shaderprogram.h>
+#include <sgct/viewport.h>
+#include <sgct/window.h>
 #ifdef SGCT_HAS_TEXT
 #include <sgct/font.h>
 #include <sgct/fontmanager.h>
 #include <sgct/freetype.h>
 #endif // SGCT_HAS_TEXT
+#include <glad/glad.h>
+#include <glm/fwd.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
+#include <string_view>
+#include <tuple>
+#include <vector>
 
 namespace {
     // Line parameters
@@ -32,16 +41,24 @@ namespace {
     constexpr sgct::vec4 ColorLoopTimeMax = sgct::vec4{ 0.15f, 0.15f, 0.8f, 0.8f };
 
     constexpr std::string_view StatsVertShader = R"(
-#version 330 core
+#version 460 core
+
 layout (location = 0) in vec2 in_vertPosition;
+
 uniform mat4 mvp;
+
+
 void main() { gl_Position = mvp * vec4(in_vertPosition, 0.0, 1.0); }
 )";
 
     constexpr std::string_view StatsFragShader = R"(
-#version 330 core
-uniform vec4 col;
+#version 460 core
+
 out vec4 out_color;
+
+uniform vec4 col;
+
+
 void main() { out_color = col; }
 )";
 
@@ -57,89 +74,112 @@ StatisticsRenderer::StatisticsRenderer(const Engine::Statistics& statistics)
 {
     ZoneScoped;
 
-    // Static background quad
-    std::vector<Vertex> vs;
-    vs.emplace_back(0.f, 0.f);
-    vs.emplace_back(static_cast<float>(Engine::Statistics::HistoryLength), 0.f);
-    vs.emplace_back(0.f, 1.f / 30.f);
-    vs.emplace_back(static_cast<float>(Engine::Statistics::HistoryLength), 1.f / 30.f);
-
-    // Static 1 ms lines
-    _lines.staticDraw.nLines = 0;
-    for (float f = 0.001f; f < (1.f / 30.f); f += 0.001f) {
-        vs.emplace_back(0.f, f);
-        vs.emplace_back(static_cast<float>(Engine::Statistics::HistoryLength), f);
-        _lines.staticDraw.nLines++;
-    }
-
-    // Static 0, 30 & 60 FPS lines
-    vs.emplace_back(0.f, 0.f);
-    vs.emplace_back(static_cast<float>(Engine::Statistics::HistoryLength), 0.f);
-
-    vs.emplace_back(0.f, 1.f / 30.f);
-    vs.emplace_back(static_cast<float>(Engine::Statistics::HistoryLength), 1.f / 30.f);
-
-    vs.emplace_back(0.f, 1.f / 60.f);
-    vs.emplace_back(static_cast<float>(Engine::Statistics::HistoryLength), 1.f / 60.f);
-
     // Setup shaders
     _shader = ShaderProgram("General Statistics Shader");
     _shader.addVertexShader(StatsVertShader);
     _shader.addFragmentShader(StatsFragShader);
     _shader.createAndLinkProgram();
-    _shader.bind();
     _mvpLoc = glGetUniformLocation(_shader.id(), "mvp");
     _colorLoc = glGetUniformLocation(_shader.id(), "col");
-    ShaderProgram::unbind();
 
-    // OpenGL objects for lines
-    glGenVertexArrays(1, &_lines.staticDraw.vao);
-    glGenBuffers(1, &_lines.staticDraw.vbo);
-    glBindVertexArray(_lines.staticDraw.vao);
-    glBindBuffer(GL_ARRAY_BUFFER, _lines.staticDraw.vbo);
-    glBufferData(GL_ARRAY_BUFFER, vs.size() * sizeof(Vertex), vs.data(), GL_STATIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+    {
+        unsigned int& vao = _lines.staticDraw.vao;
+        unsigned int& vbo = _lines.staticDraw.vbo;
 
-    glGenVertexArrays(1, &_lines.dynamicDraw.vao);
-    glGenBuffers(1, &_lines.dynamicDraw.vbo);
-    glBindVertexArray(_lines.dynamicDraw.vao);
-    glBindBuffer(GL_ARRAY_BUFFER, _lines.dynamicDraw.vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Engine::Statistics), nullptr, GL_DYNAMIC_DRAW);
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-    glBindVertexArray(0);
+        constexpr float Length = static_cast<float>(Engine::Statistics::HistoryLength);
+        // Static background quad
+        std::vector<Vertex> vs;
+        vs.emplace_back(0.f, 0.f);
+        vs.emplace_back(Length, 0.f);
+        vs.emplace_back(0.f, 1.f / 30.f);
+        vs.emplace_back(Length, 1.f / 30.f);
 
-    // OpenGL objects for histogram
-    glGenVertexArrays(1, &_histogram.staticDraw.vao);
-    glGenBuffers(1, &_histogram.staticDraw.vbo);
-    glBindVertexArray(_histogram.staticDraw.vao);
-    glBindBuffer(GL_ARRAY_BUFFER, _histogram.staticDraw.vbo);
-    constexpr std::array<float, 8> HistogramAxisVertices = {
-        0.f, 0.f, 1.f, 0.f, 0.f, 0.f, 0.f, 1.f
-    };
-    glBufferData(
-        GL_ARRAY_BUFFER,
-        sizeof(HistogramAxisVertices),
-        HistogramAxisVertices.data(),
-        GL_STATIC_DRAW
-    );
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
+        // Static 1 ms lines
+        _lines.staticDraw.nLines = 0;
+        for (float f = 0.001f; f < (1.f / 30.f); f += 0.001f) {
+            vs.emplace_back(0.f, f);
+            vs.emplace_back(Length, f);
+            _lines.staticDraw.nLines++;
+        }
 
-    glGenVertexArrays(1, &_histogram.dynamicDraw.vao);
-    glGenBuffers(1, &_histogram.dynamicDraw.vbo);
-    glBindVertexArray(_histogram.dynamicDraw.vao);
-    glBindBuffer(GL_ARRAY_BUFFER, _histogram.dynamicDraw.vbo);
-    glBufferData(
-        GL_ARRAY_BUFFER,
-        sizeof(Histogram::Vertices),
-        nullptr,
-        GL_DYNAMIC_DRAW
-    );
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, nullptr);
-    glBindVertexArray(0);
+        // Static 0, 30 & 60 FPS lines
+        vs.emplace_back(0.f, 0.f);
+        vs.emplace_back(Length, 0.f);
+
+        vs.emplace_back(0.f, 1.f / 30.f);
+        vs.emplace_back(Length, 1.f / 30.f);
+
+        vs.emplace_back(0.f, 1.f / 60.f);
+        vs.emplace_back(Length, 1.f / 60.f);
+
+        glCreateBuffers(1, &_lines.staticDraw.vbo);
+        glNamedBufferStorage(vbo, vs.size() * sizeof(Vertex), vs.data(), GL_NONE_BIT);
+
+        glCreateVertexArrays(1, &vao);
+        glVertexArrayVertexBuffer(vao, 0, vbo, 0, sizeof(Vertex));
+
+        glEnableVertexArrayAttrib(vao, 0);
+        glVertexArrayAttribFormat(vao, 0, 2, GL_FLOAT, GL_FALSE, 0);
+        glVertexArrayAttribBinding(vao, 0, 0);
+    }
+
+    {
+        unsigned int& vao = _lines.dynamicDraw.vao;
+        unsigned int& vbo = _lines.dynamicDraw.vbo;
+
+        glCreateBuffers(1, &vbo);
+        glNamedBufferStorage(
+            vbo,
+            sizeof(StatisticsRenderer::Lines::Vertices),
+            nullptr,
+            GL_DYNAMIC_STORAGE_BIT
+        );
+
+        glCreateVertexArrays(1, &vao);
+        glVertexArrayVertexBuffer(vao, 0, vbo, 0, sizeof(Vertex));
+
+        glEnableVertexArrayAttrib(vao, 0);
+        glVertexArrayAttribFormat(vao, 0, 2, GL_FLOAT, GL_FALSE, 0);
+        glVertexArrayAttribBinding(vao, 0, 0);
+    }
+
+    {
+        unsigned int& vao = _histogram.staticDraw.vao;
+        unsigned int& vbo = _histogram.staticDraw.vbo;
+
+        glCreateBuffers(1, &vbo);
+        constexpr std::array<Vertex, 4> Vertices = {
+            Vertex{ 0.f, 0.f }, Vertex{ 1.f, 0.f }, Vertex{ 0.f, 0.f }, Vertex{ 0.f, 1.f }
+        };
+        glNamedBufferStorage(vbo, 4 * sizeof(Vertex), Vertices.data(), GL_NONE_BIT);
+
+        glCreateVertexArrays(1, &vao);
+        glVertexArrayVertexBuffer(vao, 0, vbo, 0, sizeof(Vertex));
+
+        glEnableVertexArrayAttrib(vao, 0);
+        glVertexArrayAttribFormat(vao, 0, 2, GL_FLOAT, GL_FALSE, 0);
+        glVertexArrayAttribBinding(vao, 0, 0);
+    }
+
+    {
+        unsigned int& vao = _histogram.dynamicDraw.vao;
+        unsigned int& vbo = _histogram.dynamicDraw.vbo;
+
+        glCreateBuffers(1, &vbo);
+        glNamedBufferStorage(
+            vbo,
+            sizeof(Histogram::Vertices),
+            nullptr,
+            GL_DYNAMIC_STORAGE_BIT
+        );
+
+        glCreateVertexArrays(1, &vao);
+        glVertexArrayVertexBuffer(vao, 0, vbo, 0, sizeof(Vertex));
+
+        glEnableVertexArrayAttrib(vao, 0);
+        glVertexArrayAttribFormat(vao, 0, 2, GL_FLOAT, GL_FALSE, 0);
+        glVertexArrayAttribBinding(vao, 0, 0);
+    }
 }
 
 StatisticsRenderer::~StatisticsRenderer() {
@@ -184,14 +224,12 @@ void StatisticsRenderer::update() {
         _lines.buffer.loopTimeMax[i].y = static_cast<float>(_statistics.loopTimeMax[i]);
     }
 
-    glBindBuffer(GL_ARRAY_BUFFER, _lines.dynamicDraw.vbo);
-    glBufferData(
-        GL_ARRAY_BUFFER,
+    glNamedBufferSubData(
+        _lines.dynamicDraw.vbo,
+        0,
         sizeof(Lines::Vertices),
-        &_lines.buffer.frametimes,
-        GL_DYNAMIC_DRAW
+        &_lines.buffer.frametimes
     );
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 
     // Histogram update
@@ -201,7 +239,7 @@ void StatisticsRenderer::update() {
         std::fill(hValues.begin(), hValues.end(), 0);
 
         for (const double d : sValues) {
-            // convert from d into [0, 1];  0 for d=0  and 1 for d=MaxHistogramValue
+            // Convert from d into [0, 1];  0 for d=0  and 1 for d=MaxHistogramValue
             const double dp = d / scale;
             const int dpScaled = static_cast<int>(dp * Histogram::Bins);
             const int bin = std::clamp(dpScaled, 0, Histogram::Bins - 1);
@@ -251,15 +289,12 @@ void StatisticsRenderer::update() {
     convertValues(h.buffer.loopTimeMin, h.values.loopTimeMin, h.maxBinValue.loopTimeMin);
     convertValues(h.buffer.loopTimeMax, h.values.loopTimeMax, h.maxBinValue.loopTimeMax);
 
-
-    glBindBuffer(GL_ARRAY_BUFFER, _histogram.dynamicDraw.vbo);
-    glBufferData(
-        GL_ARRAY_BUFFER,
+    glNamedBufferSubData(
+        _histogram.dynamicDraw.vbo,
+        0,
         sizeof(Histogram::Vertices),
-        _histogram.buffer.frametimes.data(),
-        GL_DYNAMIC_DRAW
+        _histogram.buffer.frametimes.data()
     );
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void StatisticsRenderer::render(const Window& window, const Viewport& viewport) const {
@@ -314,43 +349,43 @@ void StatisticsRenderer::render(const Window& window, const Viewport& viewport) 
         glm::mat4 m = glm::translate(orthoMat, glm::vec3(0.f, 250.f * _scale, 0.f));
         m = glm::translate(m, glm::vec3(_offset.x * res.x, _offset.y * res.y, 0.f));
         m = glm::scale(m, glm::vec3(size.x, size.y, 1.f));
-        glUniformMatrix4fv(_mvpLoc, 1, GL_FALSE, glm::value_ptr(m));
+        glProgramUniformMatrix4fv(_shader.id(), _mvpLoc, 1, GL_FALSE, glm::value_ptr(m));
 
         glBindVertexArray(_lines.staticDraw.vao);
 
-        // draw background (1024x1024 canvas)
-        glUniform4fv(_colorLoc, 1, &ColorStaticBackground.x);
+        // Draw background (1024x1024 canvas)
+        glProgramUniform4fv(_shader.id(), _colorLoc, 1, &ColorStaticBackground.x);
         glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
         // 1 ms lines
-        glUniform4fv(_colorLoc, 1, &ColorStaticGrid.x);
+        glProgramUniform4fv(_shader.id(), _colorLoc, 1, &ColorStaticGrid.x);
         glDrawArrays(GL_LINES, 4, _lines.staticDraw.nLines * 2);
 
-        // zero line, 60hz & 30hz
-        glUniform4fv(_colorLoc, 1, &ColorStaticFrequency.x);
+        // Zero line, 60hz & 30hz
+        glProgramUniform4fv(_shader.id(), _colorLoc, 1, &ColorStaticFrequency.x);
         glDrawArrays(GL_LINES, 4 + _lines.staticDraw.nLines * 2, 6);
 
         glBindVertexArray(_lines.dynamicDraw.vao);
 
-        // frametime
+        // Frametime
         constexpr int StatsLength = Engine::Statistics::HistoryLength;
-        glUniform4fv(_colorLoc, 1, &ColorFrameTime.x);
+        glProgramUniform4fv(_shader.id(), _colorLoc, 1, &ColorFrameTime.x);
         glDrawArrays(GL_LINE_STRIP, 0 * StatsLength, StatsLength);
 
-        // drawtime
-        glUniform4fv(_colorLoc, 1, &ColorDrawTime.x);
+        // Drawtime
+        glProgramUniform4fv(_shader.id(), _colorLoc, 1, &ColorDrawTime.x);
         glDrawArrays(GL_LINE_STRIP, 1 * StatsLength, StatsLength);
 
-        // synctime
-        glUniform4fv(_colorLoc, 1, &ColorSyncTime.x);
+        // Synctime
+        glProgramUniform4fv(_shader.id(), _colorLoc, 1, &ColorSyncTime.x);
         glDrawArrays(GL_LINE_STRIP, 2 * StatsLength, StatsLength);
 
-        // looptimemin
-        glUniform4fv(_colorLoc, 1, &ColorLoopTimeMin.x);
+        // Looptimemin
+        glProgramUniform4fv(_shader.id(), _colorLoc, 1, &ColorLoopTimeMin.x);
         glDrawArrays(GL_LINE_STRIP, 3 * StatsLength, StatsLength);
 
-        // looptimemax
-        glUniform4fv(_colorLoc, 1, &ColorLoopTimeMax.x);
+        // Looptimemax
+        glProgramUniform4fv(_shader.id(), _colorLoc, 1, &ColorLoopTimeMax.x);
         glDrawArrays(GL_LINE_STRIP, 4 * StatsLength, StatsLength);
 
         glBindVertexArray(0);

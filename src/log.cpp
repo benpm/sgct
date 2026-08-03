@@ -2,22 +2,23 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
 #include <sgct/log.h>
 
 #include <sgct/format.h>
-#include <sgct/networkmanager.h>
-#include <sgct/mutexes.h>
-#include <cstdarg>
-#include <fstream>
+#include <array>
+#include <ctime>
 #include <iostream>
 #include <sstream>
+#include <stdexcept>
+#include <utility>
 
 #ifdef WIN32
 #include <Windows.h>
+#include <corecrt.h>
 #endif // WIN32
 
 namespace {

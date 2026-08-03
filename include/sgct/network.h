@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,8 +10,10 @@
 #define __SGCT__NETWORK__H__
 
 #include <sgct/sgctexports.h>
+
 #include <atomic>
 #include <condition_variable>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -50,7 +52,7 @@ public:
 
     /**
      * \param port The network port (TCP)
-     * \param address The hostname, IPv4 address or ip6 address
+     * \param address The hostname, IPv4 address or IPv6 address
      * \param isServer Indicates if this connection is a server or client
      * \param t The type of connection
      */
@@ -126,7 +128,6 @@ private:
         uint32_t& uncompressedDataSize);
     int readExternalMessage();
 
-    /// function to decode messages
     void communicationHandler();
     void connectionHandler();
 

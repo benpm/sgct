@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,10 +10,10 @@
 #define __SGCT__NODE__H__
 
 #include <sgct/sgctexports.h>
-#include <sgct/keys.h>
-#include <sgct/offscreenbuffer.h>
-#include <sgct/screencapture.h>
+
 #include <sgct/window.h>
+#include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -43,17 +43,17 @@ public:
     const std::vector<std::unique_ptr<Window>>& windows() const;
 
     /**
-     * \return the address of this node
+     * \return The address of this node
      */
     const std::string& address() const;
 
     /**
-     * \return the sync port of this node
+     * \return The sync port of this node
      */
     int syncPort() const;
 
     /**
-     * \return the data transfer port of this node
+     * \return The data transfer port of this node
      */
     int dataTransferPort() const;
 

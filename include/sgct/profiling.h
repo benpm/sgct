@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -30,7 +30,7 @@ void* operator new(size_t count);
 void operator delete(void* ptr) noexcept;
 #endif // SGCT_OVERRIDE_NEW_AND_DELETE
 
-#else
+#else // ^^^^ TRACY_ENABLE // !TRACY_ENABLE vvvv 
 
 #define ZoneScoped
 #define ZoneScopedN(x)

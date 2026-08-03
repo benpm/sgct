@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,6 +10,7 @@
 #define __SGCT__TEXTUREMANAGER__H__
 
 #include <sgct/sgctexports.h>
+
 #include <filesystem>
 #include <vector>
 
@@ -48,7 +49,7 @@ public:
      * \param anisotropicFilterSize The filter size that is used for the anisotropic
      *        filtering. If this value is 1.f, only bilinear filtering is used
      * \param mipmapLevels The number of mipmap levels that will be generated, setting
-              this value to 1 or less disables mipmaps
+     *        this value to 1 or less disables mipmaps
      * \return The OpenGL name for the texture that was loaded
      */
     unsigned int loadTexture(const Image& img, bool interpolate = true,

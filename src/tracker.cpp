@@ -2,13 +2,12 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
 #include <sgct/tracker.h>
 
-#include <sgct/engine.h>
 #include <sgct/format.h>
 #include <sgct/log.h>
 #include <sgct/mutexes.h>
@@ -57,12 +56,16 @@ TrackingDevice* Tracker::deviceBySensorId(int id) const {
 void Tracker::setOrientation(quat q) {
     const std::unique_lock lock(mutex::Tracking);
 
-    // create inverse rotation matrix
+    // Create inverse rotation matrix
     glm::mat4 orientation = glm::inverse(glm::mat4_cast(glm::make_quat(&q.x)));
-    std::memcpy(&_orientation, glm::value_ptr(orientation), 16 * sizeof(float));
+    std::memcpy(
+        _orientation.values.data(),
+        glm::value_ptr(orientation),
+        16 * sizeof(float)
+    );
 
     glm::mat4 transMat = glm::translate(glm::mat4(1.f), glm::make_vec3(&_offset.x));
-    std::memcpy(&_transform, glm::value_ptr(transMat), 16 * sizeof(float));
+    std::memcpy(_transform.values.data(), glm::value_ptr(transMat), 16 * sizeof(float));
 }
 
 void Tracker::setOrientation(float xRot, float yRot, float zRot) {
@@ -79,7 +82,7 @@ void Tracker::setOffset(vec3 offset) {
     glm::mat4 trans =
         glm::translate(glm::mat4(1.f), glm::make_vec3(&_offset.x)) *
         glm::make_mat4(_orientation.values.data());
-    std::memcpy(&_transform, glm::value_ptr(trans), 16 * sizeof(float));
+    std::memcpy(_transform.values.data(), glm::value_ptr(trans), 16 * sizeof(float));
 }
 
 void Tracker::setScale(double scaleVal) {

@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -3998,7 +3998,7 @@ TEST_CASE("Load: Window/ScalableMesh", "[parse]") {
       "port": 1,
       "windows": [
         {
-          "size": { "x": 640, "y": 480 },
+          "size": { "x": 1, "y": 1 },
           "scalablemesh": "abc"
         }
       ]
@@ -4044,7 +4044,7 @@ TEST_CASE("Load: Window/ScalableMesh", "[parse]") {
       "port": 1,
       "windows": [
         {
-          "size": { "x": 640, "y": 480 },
+          "size": { "x": 1, "y": 1 },
           "scalablemesh": "def"
         }
       ]

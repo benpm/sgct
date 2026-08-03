@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -12,11 +12,15 @@
 #include <sgct/sgctexports.h>
 #include <sgct/projection/nonlinearprojection.h>
 
-#include <sgct/callbackdata.h>
-#include <sgct/definitions.h>
 #include <sgct/math.h>
+#include <sgct/shaderprogram.h>
 
 namespace sgct {
+
+namespace config { struct EquirectangularProjection; }
+class BaseViewport;
+class User;
+class Window;
 
 class SGCT_EXPORT EquirectangularProjection final : public NonLinearProjection {
 public:

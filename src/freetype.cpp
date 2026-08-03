@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,22 +10,24 @@
 
 #include <sgct/freetype.h>
 
-#include <sgct/engine.h>
+#include <sgct/baseviewport.h>
 #include <sgct/font.h>
 #include <sgct/fontmanager.h>
 #include <sgct/opengl.h>
+#include <sgct/shaderprogram.h>
 #include <sgct/window.h>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include <cstdarg>
+#include <cstring>
 #include <sstream>
+#include <utility>
 
 namespace {
     glm::mat4 setupOrthoMat(const sgct::Window& win, const sgct::BaseViewport& vp) {
         const sgct::vec2 res = sgct::vec2{
-            static_cast<float>(win.windowResolution().x),
-            static_cast<float>(win.windowResolution().y)
+            static_cast<float>(win.windowSize().x),
+            static_cast<float>(win.windowSize().y)
         };
         const sgct::vec2 size = vp.size();
         const sgct::vec2 scale = win.scale();
@@ -52,7 +54,7 @@ namespace {
             const sgct::text::Font::FontFaceData& ffd = font.fontFaceData(c);
             lineWidth += ffd.distToNextChar;
         }
-        // add last char width
+        // Add last char width
         const char c = line.c_str()[line.length() - 1];
         const sgct::text::Font::FontFaceData& ffd = font.fontFaceData(c);
         lineWidth += ffd.size.x;
@@ -80,7 +82,6 @@ void print(const Window& window, const BaseViewport& viewport, Font& font, Align
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     glBindVertexArray(font.vao());
-    glActiveTexture(GL_TEXTURE0);
 
     for (size_t i = 0; i < lines.size(); i++) {
         glm::vec3 offset(x, y - h * i, 0.f);
@@ -95,9 +96,7 @@ void print(const Window& window, const BaseViewport& viewport, Font& font, Align
         for (const char c : lines[i]) {
             const sgct::text::Font::FontFaceData& ffd = font.fontFaceData(c);
 
-            glBindTexture(GL_TEXTURE_2D, ffd.texId);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-            glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+            glBindTextureUnit(0, ffd.texId);
 
             const glm::mat4 trans = glm::translate(
                 orthoMatrix,
@@ -105,7 +104,7 @@ void print(const Window& window, const BaseViewport& viewport, Font& font, Align
             );
             glm::mat4 scale = glm::scale(trans, glm::vec3(ffd.size.x, ffd.size.y, 1.f));
             sgct::mat4 s;
-            std::memcpy(&s, glm::value_ptr(scale), sizeof(sgct::mat4));
+            std::memcpy(s.values.data(), glm::value_ptr(scale), sizeof(sgct::mat4));
 
             FontManager::instance().bindShader(s, color, 0);
 

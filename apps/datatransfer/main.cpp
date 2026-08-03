@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -41,40 +41,48 @@ namespace {
     std::unique_ptr<Box> box;
     GLint matrixLoc = -1;
 
-    // variables to share across cluster
+    // Variables to share across cluster
     double currentTime(0.0);
 
     constexpr std::string_view vertexShader = R"(
-  #version 330 core
+  #version 460 core
 
-  layout(location = 0) in vec2 texCoords;
-  layout(location = 1) in vec3 normals;
-  layout(location = 2) in vec3 vertPositions;
+  layout(location = 0) in vec2 in_texCoords;
+  layout(location = 1) in vec3 in_normal;
+  layout(location = 2) in vec3 in_position;
+
+  out Data {
+    vec2 texCoords;
+  } out_data;
 
   uniform mat4 mvp;
-  out vec2 uv;
+
 
   void main() {
-    gl_Position =  mvp * vec4(vertPositions, 1.0);
-    uv = texCoords;
+    gl_Position = mvp * vec4(in_position, 1.0);
+    out_data.texCoords = in_texCoords;
   })";
 
     constexpr std::string_view fragmentShader = R"(
-  #version 330 core
+  #version 460 core
+
+  in Data {
+    vec2 texCoords;
+  } in_data;
+
+  out vec4 out_color;
 
   uniform sampler2D tex;
 
-  in vec2 uv;
-  out vec4 color;
 
-  void main() { color = texture(tex, uv); }
+  void main() { out_color = texture(tex, in_data.texCoords); }
 )";
 } // namespace
 
 using namespace sgct;
 
 void readImage(unsigned char* data, int len) {
-    std::unique_lock lk(imageMutex);
+    const std::unique_lock lock(imageMutex);
 
     transImg = std::make_unique<Image>();
 
@@ -88,19 +96,19 @@ void readImage(unsigned char* data, int len) {
 }
 
 void startDataTransfer() {
-    // iterate
+    // Iterate
     int id = currentPackage;
     id++;
     currentPackage = id;
 
-    // make sure to keep within bounds
+    // Make sure to keep within bounds
     if (static_cast<int>(imagePaths.size()) <= id) {
         return;
     }
 
     sendTimer = time();
 
-    // load from file
+    // Load from file
     const std::string& tmpPair = imagePaths[static_cast<size_t>(id)];
 
     std::ifstream file(tmpPair.c_str(), std::ios::binary);
@@ -113,26 +121,25 @@ void startDataTransfer() {
         const int s = static_cast<int>(size);
         NetworkManager::instance().transferData(buffer.data(), s, id);
 
-        // read the image on master
+        // Read the image on master
         readImage(reinterpret_cast<unsigned char*>(buffer.data()), s);
     }
 }
 
 void uploadTexture() {
-    std::unique_lock lk(imageMutex);
+    const std::unique_lock lock(imageMutex);
 
     if (!transImg) {
-        // if invalid load
+        // If invalid load
         texIds.push_back(0);
         return;
     }
 
     glfwMakeContextCurrent(hiddenWindow);
 
-    // create texture
+    // Create texture
     GLuint tex;
-    glGenTextures(1, &tex);
-    glBindTexture(GL_TEXTURE_2D, tex);
+    glCreateTextures(GL_TEXTURE_2D, 1, &tex);
     glPixelStorei(GL_PACK_ALIGNMENT, 1);
     glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
@@ -164,15 +171,24 @@ void uploadTexture() {
     int mipMapLevels = 8;
     GLenum format = (bpc == 1 ? GL_UNSIGNED_BYTE : GL_UNSIGNED_SHORT);
 
-    glTexStorage2D(
-        GL_TEXTURE_2D,
+    glTextureParameteri(tex, GL_TEXTURE_BASE_LEVEL, 0);
+    glTextureParameteri(tex, GL_TEXTURE_MAX_LEVEL, mipMapLevels - 1);
+
+    glGenerateTextureMipmap(tex);
+    glTextureParameteri(tex, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTextureParameteri(tex, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTextureParameteri(tex, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTextureParameteri(tex, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glTextureStorage2D(
+        tex,
         mipMapLevels,
         internalformat,
         transImg->size().x,
         transImg->size().y
     );
-    glTexSubImage2D(
-        GL_TEXTURE_2D,
+    glTextureSubImage2D(
+        tex,
         0,
         0,
         0,
@@ -183,17 +199,6 @@ void uploadTexture() {
         transImg->data()
     );
 
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_BASE_LEVEL, 0);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAX_LEVEL, mipMapLevels - 1);
-
-    glGenerateMipmap(GL_TEXTURE_2D);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    glBindTexture(GL_TEXTURE_2D, 0);
-
     Log::Info(std::format(
         "Texture id {} loaded ({}x{}x{})",
         tex, transImg->size().x, transImg->size().y, transImg->channels()
@@ -202,23 +207,22 @@ void uploadTexture() {
     texIds.push_back(tex);
     transImg = nullptr;
 
-    glFinish();
     glfwMakeContextCurrent(nullptr);
 }
 
 void threadWorker() {
     while (isRunning) {
-        // runs only on master
+        // Runs only on master
         if (transfer && !serverUploadDone && !clientsUploadDone) {
             startDataTransfer();
             transfer = false;
 
-            // load texture on master
+            // Load texture on master
             uploadTexture();
             serverUploadDone = true;
 
             if (ClusterManager::instance().numberOfNodes() == 1) {
-                // no cluster
+                // No cluster
                 clientsUploadDone = true;
             }
         }
@@ -233,7 +237,7 @@ void draw(const RenderData& data) {
 
     constexpr double Speed = 0.44;
 
-    // create scene transform (animation)
+    // Create scene transform (animation)
     glm::mat4 scene = glm::translate(glm::mat4(1.f), glm::vec3(0.f, 0.f, -3.f));
     scene = glm::rotate(
         scene,
@@ -249,13 +253,11 @@ void draw(const RenderData& data) {
     const glm::mat4 mvp =
         glm::make_mat4x4(data.modelViewProjectionMatrix.values.data()) * scene;
 
-    glActiveTexture(GL_TEXTURE0);
-
     if (texIndex != -1) {
-        glBindTexture(GL_TEXTURE_2D, texIds[texIndex]);
+        glBindTextureUnit(0, texIds[texIndex]);
     }
     else {
-        glBindTexture(GL_TEXTURE_2D, textureId);
+        glBindTextureUnit(0, textureId);
     }
 
     ShaderManager::instance().shaderProgram("xform").bind();
@@ -271,7 +273,7 @@ void preSync() {
     if (Engine::instance().isMaster()) {
         currentTime = time();
 
-        // if texture is uploaded then iterate the index
+        // If texture is uploaded then iterate the index
         if (serverUploadDone && clientsUploadDone) {
             texIndex++;
             serverUploadDone = false;
@@ -305,7 +307,8 @@ void initOGL(GLFWwindow* win) {
 
     // Set up backface culling
     glCullFace(GL_BACK);
-    glFrontFace(GL_CCW); // our polygon winding is counter clockwise
+    // Our polygon winding is counter clockwise
+    glFrontFace(GL_CCW);
 
     ShaderManager::instance().addShaderProgram("xform", vertexShader, fragmentShader);
     const ShaderProgram& prog = ShaderManager::instance().shaderProgram("xform");
@@ -368,7 +371,7 @@ void dataTransferDecoder(void* data, int length, int packageId, int clientIndex)
 
     currentPackage = packageId;
 
-    // read the image on master
+    // Read the image on master
     readImage(reinterpret_cast<unsigned char*>(data), length);
     uploadTexture();
 }
@@ -404,10 +407,10 @@ void drop(const std::vector<std::string_view>& path) {
         return;
     }
 
-    // simply pick the first path to transmit
+    // Simply pick the first path to transmit
     std::string tmpStr = std::string(path[0]);
 
-    // transform to lowercase
+    // Transform to lowercase
     std::transform(
         tmpStr.begin(),
         tmpStr.end(),
@@ -415,9 +418,9 @@ void drop(const std::vector<std::string_view>& path) {
         [](char c) { return static_cast<char>(::tolower(c)); }
     );
 
-    const bool foundJpg = tmpStr.find(".jpg") != std::string::npos;
-    const bool foundJpeg = tmpStr.find(".jpeg") != std::string::npos;
-    const bool foundPng = tmpStr.find(".png") != std::string::npos;
+    const bool foundJpg = tmpStr.contains(".jpg");
+    const bool foundJpeg = tmpStr.contains(".jpeg");
+    const bool foundPng = tmpStr.contains(".png");
     if (foundJpg || foundJpeg || foundPng) {
         imagePaths.push_back(std::string(path[0]));
         transfer = true;
@@ -432,19 +435,20 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    Engine::Callbacks callbacks;
-    callbacks.initOpenGL = initOGL;
-    callbacks.preSync = preSync;
-    callbacks.encode = encode;
-    callbacks.decode = decode;
-    callbacks.postSyncPreDraw = postSyncPreDraw;
-    callbacks.draw = draw;
-    callbacks.cleanup = cleanup;
-    callbacks.keyboard = keyboard;
-    callbacks.drop = drop;
-    callbacks.dataTransferDecode = dataTransferDecoder;
-    callbacks.dataTransferStatus = dataTransferStatus;
-    callbacks.dataTransferAcknowledge = dataTransferAcknowledge;
+    const Engine::Callbacks callbacks = {
+        .initOpenGL = initOGL,
+        .preSync = preSync,
+        .postSyncPreDraw = postSyncPreDraw,
+        .draw = draw,
+        .cleanup = cleanup,
+        .encode = encode,
+        .decode = decode,
+        .dataTransferDecode = dataTransferDecoder,
+        .dataTransferStatus = dataTransferStatus,
+        .dataTransferAcknowledge = dataTransferAcknowledge,
+        .keyboard = keyboard,
+        .drop = drop
+    };
 
     try {
         Engine::create(cluster, callbacks, config);

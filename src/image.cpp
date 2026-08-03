@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -16,7 +16,11 @@
 #include <zlib.h>
 #include <algorithm>
 #include <chrono>
+#include <csetjmp>
+#include <cstdio>
+#include <stdexcept>
 #include <string>
+#include <utility>
 
 #ifdef WIN32
 #include <CodeAnalysis/warnings.h>
@@ -39,14 +43,18 @@
 #pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
 #endif // __clang__
 
-namespace {
+// Include stb at global scope (not in an anonymous namespace): clang would otherwise nest
+// the stb headers' `namespace std` inside the anonymous namespace, making every later
+// `std::` reference ambiguous. The *_STATIC macros give internal linkage, which is what
+// the anonymous namespace was providing.
 #define STBI_NO_SIMD
+#define STB_IMAGE_WRITE_STATIC
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <stb_image_write.h>
 
+#define STB_IMAGE_STATIC
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
-} // namespace
 
 #ifdef __clang__
 #pragma clang diagnostic pop
@@ -111,8 +119,8 @@ void Image::save(const std::filesystem::path& filename) {
         throw Err(9002, "Filename not set for saving image");
     }
 
-    // We use libPNG instead of stb as libPNG is faster and we care about how fast
-    // PNGs are written to disk in production
+    // We use libPNG instead of stb as libPNG is faster and we care about how fast PNGs
+    // are written to disk in production
     if (_data == nullptr) {
         throw Err(9006, "Missing image data to save PNG");
     }
@@ -129,7 +137,7 @@ void Image::save(const std::filesystem::path& filename) {
         throw Err(9008, std::format("Cannot create PNG file '{}'", f));
     }
 
-    // initialize stuff
+    // Initialize stuff
     png_structp png = png_create_write_struct(
         PNG_LIBPNG_VER_STRING,
         nullptr,
@@ -193,7 +201,7 @@ void Image::save(const std::filesystem::path& filename) {
     }
     png_write_info(png, info);
 
-    // swap big-endian to little endian
+    // Swap big-endian to little endian
     if (_bytesPerChannel == 2) {
         png_set_swap(png);
     }
@@ -211,11 +219,7 @@ void Image::save(const std::filesystem::path& filename) {
     fclose(fp);
 
     const double t = (time() - t0) * 1000.0;
-    // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-    // formatting std::filesystem::path
-    Log::Debug(std::format(
-        "'{}' was saved successfully ({:.2f} ms)", filename.string(), t
-    ));
+    Log::Debug(std::format("'{}' was saved successfully ({:.2f} ms)", filename, t));
 }
 
 unsigned char* Image::data() {
@@ -265,7 +269,7 @@ void Image::allocateOrResizeData() {
     }
 
     if (_data && _dataSize != dataSize) {
-        // re-allocate if needed
+        // Reallocate if needed
         delete[] _data;
         _data = nullptr;
         _dataSize = 0;

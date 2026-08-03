@@ -2,7 +2,7 @@
 # SGCT                                                                                   #
 # Simple Graphics Cluster Toolkit                                                        #
 #                                                                                        #
-# Copyright (c) 2012-2025                                                                #
+# Copyright (c) 2012-2026                                                                #
 # For conditions of distribution and use, see copyright notice in LICENSE.md             #
 ##########################################################################################
 
@@ -15,8 +15,8 @@ add_custom_command(
   TARGET heightmapping POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_if_different
   "${CMAKE_CURRENT_SOURCE_DIR}/fisheye.xml"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../SharedResources/heightmap.png"
-  "${CMAKE_CURRENT_SOURCE_DIR}/../SharedResources/normalmap.png"
+  "${SGCT_EXAMPLE_SHARED_RESOURCES}/heightmap.png"
+  "${SGCT_EXAMPLE_SHARED_RESOURCES}/normalmap.png"
 
   $<TARGET_FILE_DIR:heightmapping>
 )

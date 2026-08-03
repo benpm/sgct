@@ -2,7 +2,7 @@
 # SGCT                                                                                   #
 # Simple Graphics Cluster Toolkit                                                        #
 #                                                                                        #
-# Copyright (c) 2012-2025                                                                #
+# Copyright (c) 2012-2026                                                                #
 # For conditions of distribution and use, see copyright notice in LICENSE.md             #
 ##########################################################################################
 
@@ -173,7 +173,7 @@ target_precompile_headers(sgct PRIVATE
   <vector>
 )
 
-target_include_directories(sgct PUBLIC "../../ext/json-schema-validator/src")
+target_include_directories(sgct PRIVATE "../../ext/json-schema-validator/src")
 
 find_package(glad REQUIRED)
 find_package(glfw3 REQUIRED)
@@ -204,7 +204,7 @@ target_link_libraries(sgct
   PUBLIC
     glad::glad
     glfw
-    ${OPENGL_gl_LIBRARY}
+    OpenGL::GL
     $<$<BOOL:${SGCT_FREETYPE_SUPPORT}>:freetype>
     $<$<BOOL:${SGCT_OPENVR_SUPPORT}>:openvr>
     $<$<BOOL:${SGCT_SPOUT_SUPPORT}>:spout>
@@ -239,17 +239,12 @@ target_compile_definitions(sgct
 
 if (WIN32)
   target_link_libraries(sgct PRIVATE ws2_32)
-elseif (APPLE)
-  find_library(COCOA_LIBRARY Cocoa REQUIRED)
-  find_library(IOKIT_LIBRARY IOKit REQUIRED)
-  find_library(COREVIDEO_LIBRARY CoreVideo REQUIRED)
-  target_link_libraries(sgct PRIVATE ${COCOA_LIBRARY} ${IOKIT_LIBRARY} ${COREVIDEO_LIBRARY})
 else () # Linux
   find_package(X11 REQUIRED)
   find_package(Threads REQUIRED)
-  target_link_libraries(sgct PRIVATE
-    ${X11_X11_LIB} ${X11_Xrandr_LIB} ${X11_Xinerama_LIB} ${X11_Xinput_LIB}
-    ${X11_Xxf86vm_LIB} ${X11_Xcursor_LIB}
+  target_link_libraries(sgct
+    PRIVATE
+      X11::X11 X11::Xrandr X11::Xinerama X11::Xi X11::Xxf86vm X11::Xcursor
   )
 endif ()
 

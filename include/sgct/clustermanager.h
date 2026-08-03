@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,16 +10,16 @@
 #define __SGCT__CLUSTERMANAGER__H__
 
 #include <sgct/sgctexports.h>
+
 #include <sgct/math.h>
 #include <memory>
 #include <string>
 #include <string_view>
 #include <vector>
 
-namespace sgct::config { struct Cluster; }
-
 namespace sgct {
 
+namespace config { struct Cluster; }
 class Node;
 class User;
 
@@ -84,32 +84,32 @@ public:
     User* trackedUser();
 
     /**
-     * \return the number of nodes in the cluster
+     * \return The number of nodes in the cluster
      */
     int numberOfNodes() const;
 
     /**
-     * \return the scene transform specified in the configuration file
+     * \return The scene transform specified in the configuration file
      */
     const mat4& sceneTransform() const;
 
     /**
-     * \return the id to the node which runs this application
+     * \return The id to the node which runs this application
      */
     int thisNodeId() const;
 
     /**
-     * \return the DNS name or IP of the master in the cluster
+     * \return The DNS name or IP of the master in the cluster
      */
     const std::string& masterAddress() const;
 
     /**
-     * \param state the state of the firm frame lock sync
+     * \param state The state of the firm frame lock sync
      */
     void setFirmFrameLockSyncStatus(bool state);
 
     /**
-     * \return state of the firm frame lock lock sync
+     * \return State of the firm frame lock lock sync
      */
     bool firmFrameLockSyncStatus() const;
 

@@ -2,14 +2,13 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
 #include <sgct/node.h>
 
 #include <sgct/config.h>
-#include <sgct/keys.h>
 #include <sgct/log.h>
 #include <sgct/profiling.h>
 #include <algorithm>
@@ -31,7 +30,7 @@ Node::Node(const config::Node& node, bool initializeWindows)
             if (window.scalable.has_value()) {
 #ifdef SGCT_HAS_SCALABLE
                 auto win = std::make_unique<Window>(
-                    createScalableConfiguration(*window.scalable)
+                    createScalableConfiguration(*window.scalable, window)
                 );
                 addWindow(std::move(win));
 #else // ^^^^ SGCT_HAS_SCALABLE // !SGCT_HAS_SCALABLE vvvv

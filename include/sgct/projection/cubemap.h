@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -12,22 +12,28 @@
 #include <sgct/sgctexports.h>
 #include <sgct/projection/nonlinearprojection.h>
 
-#include <sgct/callbackdata.h>
+#include <sgct/math.h>
+#include <sgct/shaderprogram.h>
 #include <array>
-#include <memory>
-
-#ifdef SGCT_HAS_SPOUT
-struct SPOUTLIBRARY;
-typedef SPOUTLIBRARY* SPOUTHANDLE;
-#endif // SGCT_HAS_SPOUT
+#include <string>
+#include <vector>
 
 #ifdef SGCT_HAS_NDI
 #include <Processing.NDI.Lib.h>
 #endif // SGCT_HAS_NDI
 
+#ifdef SGCT_HAS_SPOUT
+struct SPOUTLIBRARY;
+using SPOUTHANDLE = SPOUTLIBRARY*;
+#endif // SGCT_HAS_SPOUT
+
 namespace sgct {
 
+namespace config { struct CubemapProjection; }
+class BaseViewport;
 class OffScreenBuffer;
+class User;
+class Window;
 
 /**
  * This class manages and renders non-linear fisheye projections.
@@ -36,7 +42,7 @@ class SGCT_EXPORT CubemapProjection final : public NonLinearProjection {
 public:
     CubemapProjection(const config::CubemapProjection& config,
         const Window& parent, User& user);
-    virtual ~CubemapProjection() override;
+    ~CubemapProjection() override;
 
     /**
      * Update projection when aspect ratio changes for the viewport.
@@ -55,8 +61,7 @@ public:
     void setSpoutRigOrientation(vec3 orientation);
 
 private:
-    void initTextures(unsigned int internalFormat, unsigned int format,
-        unsigned int type) override;
+    void initTextures(unsigned int internalFormat) override;
     void initVBO() override;
     void initViewports() override;
     void initShaders() override;

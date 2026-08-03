@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -27,7 +27,7 @@ namespace {
     bool buttonLeft = false;
     bool buttonRight = false;
 
-    // to check if left mouse button is pressed
+    // To check if left mouse button is pressed
     bool mouseLeftButton = false;
     // Holds the difference in position between when the left mouse button is pressed and
     // when the mouse button is held.
@@ -66,40 +66,49 @@ namespace {
     };
 
     constexpr std::string_view GridVertexShader = R"(
-  #version 330 core
+  #version 460 core
 
-  layout(location = 0) in vec3 vertPosition;
+  layout(location = 0) in vec3 in_position;
 
   uniform mat4 mvp;
 
+
   void main() {
     // Output position of the vertex, in clip space : MVP * position
-    gl_Position =  mvp * vec4(vertPosition, 1.0);
+    gl_Position = mvp * vec4(in_position, 1.0);
   })";
 
     constexpr std::string_view GridFragmentShader = R"(
-  #version 330 core
-  out vec4 color;
-  void main() { color = vec4(1.0, 1.0, 1.0, 0.8); }
+  #version 460 core
+
+  out vec4 out_color;
+
+
+  void main() { out_color = vec4(1.0, 1.0, 1.0, 0.8); }
 )";
 
     constexpr std::string_view PyramidVertexShader = R"(
-  #version 330 core
+  #version 460 core
 
-  layout(location = 0) in vec3 vertPosition;
+  layout(location = 0) in vec3 in_position;
 
   uniform mat4 mvp;
 
+
   void main() {
     // Output position of the vertex, in clip space : MVP * position
-    gl_Position =  mvp * vec4(vertPosition, 1.0);
+    gl_Position = mvp * vec4(in_position, 1.0);
   })";
 
     constexpr std::string_view PyramidFragmentShader = R"(
-  #version 330 core
+  #version 460 core
+
+  out vec4 out_color;
+
   uniform float alpha;
-  out vec4 color;
-  void main() { color = vec4(1.0, 0.0, 0.5, alpha); }
+
+
+  void main() { out_color = vec4(1.0, 0.0, 0.5, alpha); }
 )";
 } // namespace
 
@@ -134,86 +143,65 @@ void createXZGrid(int size, float yPos) {
 
         i += 2;
     }
-
-    glBindVertexArray(grid.vao);
-    glBindBuffer(GL_ARRAY_BUFFER, grid.vbo);
-
-    // upload data to GPU
-    glBufferData(
-        GL_ARRAY_BUFFER,
+    glNamedBufferStorage(
+        grid.vbo,
         sizeof(Vertex) * grid.nVerts,
         vertData.data(),
-        GL_STATIC_DRAW
+        GL_NONE_BIT
     );
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
 
 void createPyramid(float width) {
-    std::vector<Vertex> vertData;
+    std::array<Vertex, 28> vertData;
 
-    // enhance the pyramids with lines in the edges
+    // Enhance the pyramids with lines in the edges
     // -x
-    vertData.push_back(Vertex{ -width / 2.f, 0.f,  width / 2.f });
-    vertData.push_back(Vertex{ -width / 2.f, 0.f, -width / 2.f });
-    vertData.push_back(Vertex{ 0.f, 2.f,          0.f });
-    vertData.push_back(Vertex{ -width / 2.f, 0.f,  width / 2.f });
+    vertData[0] = Vertex{ -width / 2.f, 0.f,  width / 2.f };
+    vertData[1] = Vertex{-width / 2.f, 0.f, -width / 2.f};
+    vertData[2] = Vertex{0.f, 2.f,          0.f};
+    vertData[3] = Vertex{-width / 2.f, 0.f,  width / 2.f};
     // +x
-    vertData.push_back(Vertex{ width / 2.f, 0.f, -width / 2.f });
-    vertData.push_back(Vertex{ width / 2.f, 0.f,  width / 2.f });
-    vertData.push_back(Vertex{ 0.f, 2.f,          0.f });
-    vertData.push_back(Vertex{ width / 2.f, 0.f, -width / 2.f });
+    vertData[4] = Vertex{width / 2.f, 0.f, -width / 2.f};
+    vertData[5] = Vertex{width / 2.f, 0.f,  width / 2.f};
+    vertData[6] = Vertex{0.f, 2.f,          0.f};
+    vertData[7] = Vertex{width / 2.f, 0.f, -width / 2.f};
     // -z
-    vertData.push_back(Vertex{ -width / 2.f, 0.f, -width / 2.f });
-    vertData.push_back(Vertex{ width / 2.f, 0.f, -width / 2.f });
-    vertData.push_back(Vertex{ 0.f, 2.f,          0.f });
-    vertData.push_back(Vertex{ -width / 2.f, 0.f, -width / 2.f });
+    vertData[8] = Vertex{-width / 2.f, 0.f, -width / 2.f};
+    vertData[9] = Vertex{width / 2.f, 0.f, -width / 2.f};
+    vertData[10] = Vertex{0.f, 2.f,          0.f};
+    vertData[11] = Vertex{-width / 2.f, 0.f, -width / 2.f};
     // +z
-    vertData.push_back(Vertex{ width / 2.f, 0.f,  width / 2.f });
-    vertData.push_back(Vertex{ -width / 2.f, 0.f,  width / 2.f });
-    vertData.push_back(Vertex{ 0.f, 2.f,          0.f });
-    vertData.push_back(Vertex{ width / 2.f, 0.f,  width / 2.f });
+    vertData[12] = Vertex{width / 2.f, 0.f,  width / 2.f};
+    vertData[13] = Vertex{-width / 2.f, 0.f,  width / 2.f};
+    vertData[14] = Vertex{0.f, 2.f,          0.f};
+    vertData[15] = Vertex{width / 2.f, 0.f,  width / 2.f};
 
     // triangles
     // -x
-    vertData.push_back(Vertex{ -width / 2.f, 0.f, -width / 2.f });
-    vertData.push_back(Vertex{ 0.f, 2.f,          0.f });
-    vertData.push_back(Vertex{ -width / 2.f, 0.f,  width / 2.f });
+    vertData[16] = Vertex{-width / 2.f, 0.f, -width / 2.f};
+    vertData[17] = Vertex{0.f, 2.f,          0.f};
+    vertData[18] = Vertex{-width / 2.f, 0.f,  width / 2.f};
     // +x
-    vertData.push_back(Vertex{ width / 2.f, 0.f,  width / 2.f });
-    vertData.push_back(Vertex{ 0.f, 2.f,         0.f });
-    vertData.push_back(Vertex{ width / 2.f, 0.f, -width / 2.f });
+    vertData[19] = Vertex{width / 2.f, 0.f,  width / 2.f};
+    vertData[20] = Vertex{0.f, 2.f,         0.f};
+    vertData[21] = Vertex{width / 2.f, 0.f, -width / 2.f};
     // -z
-    vertData.push_back(Vertex{ width / 2.f, 0.f, -width / 2.f });
-    vertData.push_back(Vertex{ 0.f, 2.f,          0.f });
-    vertData.push_back(Vertex{ -width / 2.f, 0.f, -width / 2.f });
+    vertData[22] = Vertex{width / 2.f, 0.f, -width / 2.f};
+    vertData[23] = Vertex{0.f, 2.f,          0.f};
+    vertData[24] = Vertex{-width / 2.f, 0.f, -width / 2.f};
     // +z
-    vertData.push_back(Vertex{ -width / 2.f, 0.f,  width / 2.f });
-    vertData.push_back(Vertex{ 0.f, 2.f,          0.f });
-    vertData.push_back(Vertex{ width / 2.f, 0.f,  width / 2.f });
+    vertData[25] = Vertex{-width / 2.f, 0.f,  width / 2.f};
+    vertData[26] = Vertex{0.f, 2.f,          0.f};
+    vertData[27] = Vertex{width / 2.f, 0.f,  width / 2.f};
 
     pyramid.nVerts = static_cast<int>(vertData.size());
 
-    glBindVertexArray(pyramid.vao);
-    glBindBuffer(GL_ARRAY_BUFFER, pyramid.vbo);
-
-    // upload data to GPU
-    glBufferData(
-        GL_ARRAY_BUFFER,
+    glNamedBufferStorage(
+        pyramid.vbo,
         sizeof(Vertex) * pyramid.nVerts,
         vertData.data(),
-        GL_STATIC_DRAW
+        GL_NONE_BIT
     );
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    vertData.clear();
 }
 
 
@@ -226,13 +214,15 @@ void drawPyramid(glm::mat4 mvp, int index) {
 
     glBindVertexArray(pyramid.vao);
 
-    // draw lines
+    // Draw lines
     glLineWidth(2.f);
-    glPolygonOffset(1.f, 0.1f); // offset to avoid z-buffer fighting
+    // Offset to avoid z-buffer fighting
+    glPolygonOffset(1.f, 0.1f);
     glUniform1f(alphaLocation, 0.8f);
     glDrawArrays(GL_LINES, 0, 16);
-    // draw triangles
-    glPolygonOffset(0.f, 0.f); // offset to avoid z-buffer fighting
+    // Draw triangles
+    // Offset to avoid z-buffer fighting
+    glPolygonOffset(0.f, 0.f);
     glUniform1f(alphaLocation, 0.3f);
     glDrawArrays(GL_TRIANGLES, 16, 12);
 
@@ -247,7 +237,8 @@ void drawXZGrid(glm::mat4 mvp) {
     glUniformMatrix4fv(grid.matrixLocation, 1, GL_FALSE, glm::value_ptr(proj));
     glBindVertexArray(grid.vao);
     glLineWidth(3.f);
-    glPolygonOffset(0.f, 0.f); // offset to avoid z-buffer fighting
+    // Offset to avoid z-buffer fighting
+    glPolygonOffset(0.f, 0.f);
     glDrawArrays(GL_LINES, 0, grid.nVerts);
 
     glBindVertexArray(0);
@@ -263,16 +254,29 @@ void cleanup() {
 }
 
 void initOGL(GLFWwindow*) {
-    glGenVertexArrays(1, &pyramid.vao);
-    glGenVertexArrays(1, &grid.vao);
+    glCreateBuffers(1, &pyramid.vbo);
+    glCreateVertexArrays(1, &pyramid.vao);
+    glVertexArrayVertexBuffer(pyramid.vao, 0, pyramid.vbo, 0, sizeof(Vertex));
 
-    glGenBuffers(1, &pyramid.vbo);
-    glGenBuffers(1, &grid.vbo);
+    glEnableVertexArrayAttrib(pyramid.vao, 0);
+    glVertexArrayAttribFormat(pyramid.vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayAttribBinding(pyramid.vao, 0, 0);
 
-    createXZGrid(LandscapeSize, -1.5f);
     createPyramid(0.6f);
 
-    // pick a seed for the random function (must be same on all nodes)
+
+    glCreateBuffers(1, &grid.vbo);
+    glCreateVertexArrays(1, &grid.vao);
+    glVertexArrayVertexBuffer(grid.vao, 0, grid.vbo, 0, sizeof(Vertex));
+
+    glEnableVertexArrayAttrib(grid.vao, 0);
+    glVertexArrayAttribFormat(grid.vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayAttribBinding(grid.vao, 0, 0);
+
+    createXZGrid(LandscapeSize, -1.5f);
+
+
+    // Pick a seed for the random function (must be same on all nodes)
     srand(9745);
     for (int i = 0; i < NumberOfPyramids; i++) {
         const float x = static_cast<float>(rand() % LandscapeSize - LandscapeSize / 2);
@@ -287,9 +291,7 @@ void initOGL(GLFWwindow*) {
         GridFragmentShader
     );
     const ShaderProgram& prog = ShaderManager::instance().shaderProgram("gridShader");
-    prog.bind();
     grid.matrixLocation = glGetUniformLocation(prog.id(), "mvp");
-    prog.unbind();
 
     ShaderManager::instance().addShaderProgram(
         "pyramidShader",
@@ -298,10 +300,8 @@ void initOGL(GLFWwindow*) {
     );
     const ShaderProgram& pyramidProg =
         ShaderManager::instance().shaderProgram("pyramidShader");
-    pyramidProg.bind();
     pyramid.matrixLocation = glGetUniformLocation(pyramidProg.id(), "mvp");
     alphaLocation = glGetUniformLocation(pyramidProg.id(), "alpha");
-    pyramidProg.unbind();
 }
 
 void preSync() {
@@ -321,7 +321,7 @@ void preSync() {
             mouseDx * RotationSpeed * Engine::instance().statistics().dt()
         );
 
-        //rotation around the y-axis
+        // Rotation around the y-axis
         const glm::mat4 viewRotateX = glm::rotate(
             glm::mat4(1.f),
             panRot,
@@ -357,17 +357,17 @@ void preSync() {
          *   4. Transform the user back to original position
          *
          * However, mathwise this process need to be reversed due to the matrix
-         * multiplication order.
+         * multiplication order
          */
 
-        // 4. transform user back to original position
+        // 4. Transform user back to original position
         vec3 mono = Engine::defaultUser().posMono();
         xform = glm::translate(glm::mat4(1.f), glm::vec3(mono.x, mono.y, mono.z));
-        // 3. apply view rotation
+        // 3. Apply view rotation
         xform *= viewRotateX;
-        // 2. apply navigation translation
+        // 2. Apply navigation translation
         xform *= glm::translate(glm::mat4(1.f), pos);
-        // 1. transform user to coordinate system origin
+        // 1. Transform user to coordinate system origin
         xform *= glm::translate(glm::mat4(1.f), -glm::vec3(mono.x, mono.y, mono.z));
     }
 }
@@ -444,15 +444,16 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    Engine::Callbacks callbacks;
-    callbacks.initOpenGL = initOGL;
-    callbacks.preSync = preSync;
-    callbacks.encode = encode;
-    callbacks.decode = decode;
-    callbacks.draw = draw;
-    callbacks.cleanup = cleanup;
-    callbacks.keyboard = keyboard;
-    callbacks.mouseButton = mouseButton;
+    const Engine::Callbacks callbacks = {
+        .initOpenGL = initOGL,
+        .preSync = preSync,
+        .draw = draw,
+        .cleanup = cleanup,
+        .encode = encode,
+        .decode = decode,
+        .keyboard = keyboard,
+        .mouseButton = mouseButton
+    };
 
     try {
         Engine::create(cluster, callbacks, config);

@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -13,8 +13,14 @@
 #include <sgct/projection/nonlinearprojection.h>
 
 #include <sgct/correctionmesh.h>
+#include <sgct/shaderprogram.h>
 
 namespace sgct {
+
+namespace config { struct SphericalMirrorProjection; }
+class BaseViewport;
+class User;
+class Window;
 
 /**
  * This class manages and renders non-linear fisheye projections.
@@ -23,7 +29,7 @@ class SGCT_EXPORT SphericalMirrorProjection final : public NonLinearProjection {
 public:
     SphericalMirrorProjection(const config::SphericalMirrorProjection& config,
         const Window& parent, User& user);
-    virtual ~SphericalMirrorProjection() final;
+    ~SphericalMirrorProjection() final;
 
     void update(const vec2& size) const override;
 
@@ -46,8 +52,7 @@ public:
     void setTilt(float angle);
 
 private:
-    void initTextures(unsigned int internalFormat, unsigned int format,
-        unsigned int type) override;
+    void initTextures(unsigned int internalFormat) override;
     void initVBO() override;
     void initViewports() override;
     void initShaders() override;

@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -15,41 +15,51 @@
 #include <sgct/offscreenbuffer.h>
 #include <sgct/opengl.h>
 #include <sgct/profiling.h>
+#include <sgct/callbackdata.h>
 #include <sgct/viewport.h>
 #include <sgct/window.h>
 #include <algorithm>
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include <string_view>
 
 namespace {
     constexpr std::string_view SphericalProjectionVert = R"(
-  #version 330 core
+  #version 460 core
 
   layout (location = 0) in vec2 in_position;
   layout (location = 1) in vec2 in_texCoords;
   layout (location = 2) in vec4 in_vertColor;
-  out vec2 tr_uv;
-  out vec4 tr_color;
+
+  out Data {
+    vec2 texCoords;
+    vec4 color;
+  } out_data;
 
   uniform mat4 mvp;
 
+
   void main() {
     gl_Position = mvp * vec4(in_position, 0.0, 1.0);
-    tr_uv = in_texCoords;
-    tr_color = in_vertColor;
+    out_data.texCoords = in_texCoords;
+    out_data.color = in_vertColor;
   }
 )";
 
     constexpr std::string_view SphericalProjectionFrag = R"(
-  #version 330 core
+  #version 460 core
 
-  in vec2 tr_uv;
-  in vec4 tr_color;
+  in Data {
+    vec2 texCoords;
+    vec4 color;
+  } in_data;
+
   out vec4 out_color;
 
   uniform sampler2D tex;
 
-  void main() { out_color = tr_color * texture(tex, tr_uv); }
+
+  void main() { out_color = in_data.color * texture(tex, in_data.texCoords); }
 )";
 } // namespace
 
@@ -95,28 +105,26 @@ void SphericalMirrorProjection::render(const BaseViewport& viewport,
     glClearColor(_clearColor.x, _clearColor.y, _clearColor.z, _clearColor.w);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    _shader.bind();
-
-    glActiveTexture(GL_TEXTURE0);
-
     glDisable(GL_CULL_FACE);
     glDisable(GL_BLEND);
     glEnable(GL_DEPTH_TEST);
     glDepthFunc(GL_ALWAYS);
 
-    glUniform1i(_texLoc, 0);
-    glUniformMatrix4fv(_matrixLoc, 1, GL_FALSE, glm::value_ptr(mvp));
+    glProgramUniform1i(_shader.id(), _texLoc, 0);
+    glProgramUniformMatrix4fv(_shader.id(), _matrixLoc, 1, GL_FALSE, glm::value_ptr(mvp));
 
-    glBindTexture(GL_TEXTURE_2D, _textures.cubeFaceFront);
+    _shader.bind();
+
+    glBindTextureUnit(0, _textures.cubeFaceFront);
     _meshBottom.renderWarpMesh();
 
-    glBindTexture(GL_TEXTURE_2D, _textures.cubeFaceLeft);
+    glBindTextureUnit(0, _textures.cubeFaceLeft);
     _meshLeft.renderWarpMesh();
 
-    glBindTexture(GL_TEXTURE_2D, _textures.cubeFaceRight);
+    glBindTextureUnit(0, _textures.cubeFaceRight);
     _meshRight.renderWarpMesh();
 
-    glBindTexture(GL_TEXTURE_2D, _textures.cubeFaceTop);
+    glBindTextureUnit(0, _textures.cubeFaceTop);
     _meshTop.renderWarpMesh();
 
     ShaderProgram::unbind();
@@ -162,7 +170,7 @@ void SphericalMirrorProjection::renderCubemap(FrustumMode frustumMode) const {
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 
         if (_cubeMapFbo->isMultiSampled()) {
-            // blit MSAA fbo to texture
+            // Blit MSAA fbo to texture
             _cubeMapFbo->bindBlit();
             _cubeMapFbo->attachColorTexture(t, GL_COLOR_ATTACHMENT0);
             _cubeMapFbo->blit();
@@ -181,16 +189,14 @@ void SphericalMirrorProjection::setTilt(float angle) {
     _tilt = angle;
 }
 
-void SphericalMirrorProjection::initTextures(unsigned int internalFormat,
-                                             unsigned int format, unsigned int type)
-{
-    auto generate = [this, internalFormat, format, type]
+void SphericalMirrorProjection::initTextures(unsigned int internalFormat) {
+    auto generate = [this, internalFormat]
                     (const BaseViewport& bv, unsigned int& texture)
     {
         if (!bv.isEnabled()) {
             return;
         }
-        generateMap(texture, internalFormat, format, type);
+        generateMap(texture, internalFormat);
         Log::Debug(std::format(
             "{}x{} cube face texture (id: {}) generated",
             _cubemapResolution.x, _cubemapResolution.y, texture
@@ -213,16 +219,16 @@ void SphericalMirrorProjection::initVBO() {
 }
 
 void SphericalMirrorProjection::initViewports() {
-    // radius is needed to calculate the distance to all view planes
+    // Radius is needed to calculate the distance to all view planes
     const float radius = _diameter / 2.f;
 
-    // setup base viewport that will be rotated to create the other cubemap views
+    // Setup base viewport that will be rotated to create the other cubemap views
     // +Z face
     const glm::vec4 lowerLeftBase(-radius, -radius, radius, 1.f);
     const glm::vec4 upperLeftBase(-radius, radius, radius, 1.f);
     const glm::vec4 upperRightBase(radius, radius, radius, 1.f);
 
-    // tilt
+    // Tilt
     const glm::mat4 tiltMat = glm::rotate(
         glm::mat4(1.f),
         glm::radians(45.f - _tilt),
@@ -246,7 +252,7 @@ void SphericalMirrorProjection::initViewports() {
         );
     }
 
-    // left
+    // Left
     {
         const glm::mat4 r = glm::rotate(
             tiltMat,
@@ -263,10 +269,10 @@ void SphericalMirrorProjection::initViewports() {
         );
     }
 
-    // bottom
+    // Bottom
     _subViewports.bottom.setEnabled(false);
 
-    // top
+    // Top
     {
         const glm::mat4 r = glm::rotate(
             tiltMat,
@@ -283,7 +289,7 @@ void SphericalMirrorProjection::initViewports() {
         );
     }
 
-    // front
+    // Front
     {
         const glm::vec3 ll = glm::vec3(tiltMat * lowerLeftBase);
         const glm::vec3 ul = glm::vec3(tiltMat * upperLeftBase);
@@ -295,13 +301,13 @@ void SphericalMirrorProjection::initViewports() {
         );
     }
 
-    // back
+    // Back
     _subViewports.back.setEnabled(false);
 }
 
 void SphericalMirrorProjection::initShaders() {
     if (_isStereo || _preferedMonoFrustumMode != FrustumMode::Mono) {
-        // if any frustum mode other than Mono (or stereo)
+        // If any frustum mode other than Mono (or stereo)
         Log::Warning("Stereo not supported in spherical projection");
     }
 
@@ -309,14 +315,11 @@ void SphericalMirrorProjection::initShaders() {
     _shader.addVertexShader(SphericalProjectionVert);
     _shader.addFragmentShader(SphericalProjectionFrag);
     _shader.createAndLinkProgram();
-    _shader.bind();
 
     _texLoc = glGetUniformLocation(_shader.id(), "tex");
-    glUniform1i(_texLoc, 0);
+    glProgramUniform1i(_shader.id(), _texLoc, 0);
 
     _matrixLoc = glGetUniformLocation(_shader.id(), "mvp");
-
-    ShaderProgram::unbind();
 }
 
 } // namespace sgct

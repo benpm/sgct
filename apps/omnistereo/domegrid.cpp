@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -18,10 +18,17 @@ DomeGrid::DomeGrid(float radius, float FOV, int segments, int rings, int resolut
     , _rings(rings)
     , _segments(segments)
 {
-    // must be four or higher
+    // Must be four or higher
     if (_resolution < 4) {
         sgct::Log::Warning("Dome geometry resolution must be higher than 4");
     }
+
+    glCreateBuffers(1, &_vbo);
+    glCreateVertexArrays(1, &_vao);
+    glVertexArrayVertexBuffer(_vao, 0, _vbo, 0, 3 * sizeof(float));
+
+    glEnableVertexArrayAttrib(_vao, 0);
+    glVertexArrayAttribFormat(_vao, 0, 3, GL_FLOAT, GL_FALSE, 0);
 
     // Create VAO
     const unsigned int numberOfVertices =
@@ -30,7 +37,7 @@ DomeGrid::DomeGrid(float radius, float FOV, int segments, int rings, int resolut
 
     size_t pos = 0;
 
-    // create rings
+    // Create rings
     for (int r = 1; r <= _rings; r++) {
         const float elevationAngle = glm::radians<float>(
             (FOV / 2.f) * (static_cast<float>(r) / static_cast<float>(_rings))
@@ -46,7 +53,7 @@ DomeGrid::DomeGrid(float radius, float FOV, int segments, int rings, int resolut
         }
     }
 
-    // create segments
+    // Create segments
     for (int s = 0; s < _segments; s++) {
         const float theta = glm::two_pi<float>() *
             (static_cast<float>(s) / static_cast<float>(_segments));
@@ -61,19 +68,7 @@ DomeGrid::DomeGrid(float radius, float FOV, int segments, int rings, int resolut
             pos += 3;
         }
     }
-
-    glGenVertexArrays(1, &_vao);
-    glBindVertexArray(_vao);
-
-    glGenBuffers(1, &_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, _vbo);
-    const size_t s = verts.size() * sizeof(float);
-    glBufferData(GL_ARRAY_BUFFER, s, verts.data(), GL_STATIC_DRAW);
-
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
-    glBindVertexArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glNamedBufferStorage(_vbo, verts.size() * sizeof(float), verts.data(), GL_NONE_BIT);
 }
 
 DomeGrid::~DomeGrid() {

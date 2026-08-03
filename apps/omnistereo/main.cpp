@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -26,7 +26,7 @@ namespace {
 
     unsigned int textureId = 0;
 
-    // variables to share across cluster
+    // Variables to share across cluster
     double currentTime = 0.0;
     bool takeScreenshot = true;
 
@@ -45,50 +45,60 @@ namespace {
     std::string sepMapSrc;
 
     constexpr std::string_view BaseVertexShader = R"(
-  #version 330 core
+  #version 460 core
 
-  layout(location = 0) in vec2 texCoords;
-  layout(location = 1) in vec3 normals;
-  layout(location = 2) in vec3 vertPositions;
+  layout(location = 0) in vec2 in_texCoords;
+  layout(location = 1) in vec3 in_normal;
+  layout(location = 2) in vec3 in_position;
+
+  out Data {
+    vec2 texCoords;
+  } out_data;
 
   uniform mat4 mvp;
-  out vec2 uv;
+
 
   void main() {
     // Output position of the vertex, in clip space : MVP * position
-    gl_Position =  mvp * vec4(vertPositions, 1.0);
-    uv = texCoords;
+    gl_Position = mvp * vec4(in_position, 1.0);
+    out_data.texCoords = in_texCoords;
   })";
 
    constexpr std::string_view BaseFragmentShader = R"(
-  #version 330 core
+  #version 460 core
+
+  in Data {
+    vec2 texCoords;
+  } in_data;
+
+  out vec4 out_color;
 
   uniform sampler2D tex;
 
-  in vec2 uv;
-  out vec4 color;
 
-  void main() { color = texture(tex, uv); }
+  void main() { out_color = texture(tex, in_data.texCoords); }
 )";
 
    constexpr std::string_view GridVertexShader = R"(
-  #version 330 core
+  #version 460 core
 
-  layout(location = 0) in vec3 vertPositions;
+  layout(location = 0) in vec3 in_position;
 
   uniform mat4 mvp;
 
+
   void main() {
     // Output position of the vertex, in clip space : MVP * position
-    gl_Position =  mvp * vec4(vertPositions, 1.0);
+    gl_Position = mvp * vec4(in_position, 1.0);
   })";
 
    constexpr std::string_view GridFragmentShader = R"(
-  #version 330 core
+  #version 460 core
 
-  out vec4 color;
+  out vec4 out_color;
 
-  void main() { color = vec4(1.0, 0.5, 0.0, 1.0); }
+
+  void main() { out_color = vec4(1.0, 0.5, 0.0, 1.0); }
 )";
 
    unsigned char getSampleAt(const sgct::Image& img, int x, int y) {
@@ -98,14 +108,14 @@ namespace {
    }
 
    float getInterpolatedSampleAt(const sgct::Image& img, float x, float y) {
-       int px = static_cast<int>(x); //floor x
-       int py = static_cast<int>(y); //floor y
+       int px = static_cast<int>(x); // =floor(x)
+       int py = static_cast<int>(y); // =floor(y)
 
        // Calculate the weights for each pixel
        float fx = x - static_cast<float>(px);
        float fy = y - static_cast<float>(py);
 
-       //if no need for interpolation
+       // If no need for interpolation
        if (fx == 0.f && fy == 0.f) {
            return static_cast<float>(getSampleAt(img, px, py));
        }
@@ -125,8 +135,6 @@ namespace {
 
        return p0 * w0 + p1 * w1 + p2 * w2 + p3 * w3;
    }
-
-
 } // namespace
 
 using namespace sgct;
@@ -189,7 +197,7 @@ void initOmniStereo(bool mask) {
 
         for (int y = 0; y < res.y; y++) {
             for (int x = 0; x < res.x; x++) {
-                // scale to [-1, 1)
+                // Scale to [-1, 1)
                 // Center of each pixel
                 const float xResf = static_cast<float>(res.x);
                 const float yResf = static_cast<float>(res.y);
@@ -212,7 +220,7 @@ void initOmniStereo(bool mask) {
                 float tmpY = normalPosition.y * cos(Tilt) - normalPosition.z * sin(Tilt);
                 float eyeRot = atan2(normalPosition.x, -tmpY);
 
-                // get corresponding map positions
+                // Get corresponding map positions
                 bool omniNeeded = true;
                 if (turnMap.channels() > 0) {
                     const glm::vec2 turnMapPos = {
@@ -220,7 +228,7 @@ void initOmniStereo(bool mask) {
                         (y / yResf) * static_cast<float>(turnMap.size().y - 1)
                     };
 
-                    // inverse gamma
+                    // Inverse gamma
                     const float headTurnMultiplier = pow(
                         getInterpolatedSampleAt(
                             turnMap,
@@ -244,7 +252,7 @@ void initOmniStereo(bool mask) {
                         (y / yResf) * static_cast<float>(sepMap.size().y - 1)
                     };
 
-                    // inverse gamma 2.2
+                    // Inverse gamma 2.2
                     const float separationMultiplier = pow(
                         getInterpolatedSampleAt(
                             sepMap,
@@ -258,24 +266,24 @@ void initOmniStereo(bool mask) {
                         omniNeeded = false;
                     }
 
-                    // get values at positions
+                    // Get values at positions
                     newEyePos = eyePos * separationMultiplier;
                 }
                 else {
                     newEyePos = eyePos;
                 }
 
-                // IF VALID
+                // If valid
                 if (r2 <= 1.1f && (omniNeeded || !mask)) {
                     auto convertCoords = [&](glm::vec2 tc) {
-                        //scale to [-1, 1)
+                        // Scale to [-1, 1)
                         const float ss = ((x + tc.x) / xResf - 0.5f) * 2.f;
                         const float tt = ((y + tc.y) / yResf - 0.5f) * 2.f;
 
                         const float rr2 = ss * ss + tt * tt;
-                        // zenith - elevation (0 degrees in zenith, 90 degrees at the rim)
+                        // Zenith - elevation (0 degrees in zenith, 90 degrees at the rim)
                         const float phi2 = sqrt(rr2) * halfFov;
-                        // azimuth (0 degrees at back of dome and 180 degrees at front)
+                        // Azimuth (0 degrees at back of dome and 180 degrees at front)
                         const float theta2 = atan2(ss, tt);
 
                         constexpr float radius = Diameter / 2.f;
@@ -310,7 +318,7 @@ void initOmniStereo(bool mask) {
                     );
                     const glm::vec3 rotatedEyePos = glm::mat3(rotEyeMat) * newEyePos;
 
-                    // tilt
+                    // Tilt
                     const glm::mat4 tiltEyeMat = glm::rotate(
                         glm::mat4(1.f),
                         Tilt,
@@ -319,7 +327,7 @@ void initOmniStereo(bool mask) {
 
                     const glm::vec3 tiltedEyePos = glm::mat3(tiltEyeMat) * rotatedEyePos;
 
-                    // calc projection
+                    // Calc projection
                     Projection proj;
                     proj.calculateProjection(
                         vec3{ tiltedEyePos.x, tiltedEyePos.y, tiltedEyePos.z },
@@ -347,7 +355,7 @@ void initOmniStereo(bool mask) {
 }
 
 void renderBoxes(glm::mat4 transform) {
-    // create scene transform
+    // Create scene transform
     const glm::mat4 levels[3] = {
         glm::translate(glm::mat4(1.f), glm::vec3(0.f, -0.5f, -3.f)),
         glm::translate(glm::mat4(1.f), glm::vec3(0.f, 1.f, -2.75f)),
@@ -385,8 +393,7 @@ void drawOmniStereo(const RenderData& renderData) {
     };
 
     ShaderManager::instance().shaderProgram("xform").bind();
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, textureId);
+    glBindTextureUnit(0, textureId);
 
     FrustumMode fm = renderData.frustumMode;
     for (int x = 0; x < res.x; x++) {
@@ -429,8 +436,7 @@ void draw(const RenderData& data) {
 
         ShaderManager::instance().shaderProgram("xform").bind();
 
-        glActiveTexture(GL_TEXTURE0);
-        glBindTexture(GL_TEXTURE_2D, textureId);
+        glBindTextureUnit(0, textureId);
         renderBoxes(vp * glm::make_mat4(data.modelMatrix.values.data()));
     }
 
@@ -452,7 +458,7 @@ void postSyncPreDraw() {
 }
 
 void postDraw() {
-    // render a single frame and exit
+    // Render a single frame and exit
     Engine::instance().terminate();
 }
 
@@ -469,17 +475,13 @@ void initOGL(GLFWwindow*) {
     ShaderManager& sm = ShaderManager::instance();
     sm.addShaderProgram("grid", GridVertexShader, GridFragmentShader);
     const ShaderProgram& gridProg = sm.shaderProgram("grid");
-    gridProg.bind();
     gridMatrixLoc = glGetUniformLocation(gridProg.id(), "mvp");
-    gridProg.unbind();
 
     sm.addShaderProgram("xform", BaseVertexShader, BaseFragmentShader);
     const ShaderProgram& xformProg = sm.shaderProgram("xform");
-    xformProg.bind();
     matrixLoc = glGetUniformLocation(xformProg.id(), "mvp");
     GLint textureLoc = glGetUniformLocation(xformProg.id(), "tex");
-    glUniform1i(textureLoc, 0);
-    xformProg.unbind();
+    glProgramUniform1i(xformProg.id(), textureLoc, 0);
 
     initOmniStereo(maskOutSimilarities);
 }
@@ -550,16 +552,17 @@ int main(int argc, char** argv) {
         }
     }
 
-    Engine::Callbacks callbacks;
-    callbacks.initOpenGL = initOGL;
-    callbacks.preSync = preSync;
-    callbacks.encode = encode;
-    callbacks.decode = decode;
-    callbacks.postSyncPreDraw = postSyncPreDraw;
-    callbacks.draw = draw;
-    callbacks.postDraw = postDraw;
-    callbacks.cleanup = cleanup;
-    callbacks.keyboard = keyboard;
+    const Engine::Callbacks callbacks = {
+        .initOpenGL = initOGL,
+        .preSync = preSync,
+        .postSyncPreDraw = postSyncPreDraw,
+        .draw = draw,
+        .postDraw = postDraw,
+        .cleanup = cleanup,
+        .encode = encode,
+        .decode = decode,
+        .keyboard = keyboard
+    };
 
     try {
         Engine::create(cluster, callbacks, config);

@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -14,11 +14,13 @@
 // not change anytime soon anyway (famous last words)
 
 namespace sgct {
+
 enum class Action {
     Release = 0, // = GLFW_RELEASE
-    Press = 1, // = GLFW_PRESS;
-    Repeat = 2 // = GLFW_REPEAT;
+    Press = 1, // = GLFW_PRESS
+    Repeat = 2 // = GLFW_REPEAT
 };
+
 } // namespace sgct
 
 #endif // __SGCT__ACTIONS__H__

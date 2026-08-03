@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,7 +10,9 @@
 #define __SGCT__SHADERPROGRAM__H__
 
 #include <sgct/sgctexports.h>
+
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace sgct {
@@ -52,6 +54,7 @@ public:
      * Will create and add a vertex shader to the program.
      *
      * \param src The shader source string
+     *
      * \throw std::runtime_error If the adding of the shaders failed
      */
     void addVertexShader(std::string_view src);
@@ -60,6 +63,7 @@ public:
      * Will create and add a fragment shader to the program.
      *
      * \param src The shader source string
+     *
      * \throw std::runtime_error If the adding of the shaders failed
      */
     void addFragmentShader(std::string_view src);

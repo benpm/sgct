@@ -2,31 +2,31 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
 #ifndef __SGCT__BASEVIEWPORT__H__
 #define __SGCT__BASEVIEWPORT__H__
 
-#include <sgct/definitions.h>
 #include <sgct/sgctexports.h>
+
+#include <sgct/definitions.h>
 #include <sgct/math.h>
 #include <sgct/projection.h>
 #include <sgct/projection/projectionplane.h>
-#include <string>
 
 namespace sgct {
 
-class Window;
 class User;
+class Window;
 
 /**
  * This class holds and manages viewportdata and calculates frustums.
  */
 class SGCT_EXPORT BaseViewport {
 public:
-    BaseViewport(const Window& parent, FrustumMode eye = FrustumMode::Mono);
+    explicit BaseViewport(const Window& parent, FrustumMode eye = FrustumMode::Mono);
     virtual ~BaseViewport();
 
     void setupViewport(FrustumMode frustum) const;

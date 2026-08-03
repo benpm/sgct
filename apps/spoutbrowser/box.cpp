@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,22 +10,38 @@
 
 #include <sgct/opengl.h>
 #include <array>
+#include <cstddef>
 
 Box::Box(float size, TextureMappingMode mode) {
-    struct VertexData {
-        float s = 0.f;
-        float t = 0.f;  // Texcoord0 -> size=8
-        float nx = 0.f;
-        float ny = 0.f;
-        float nz = 0.f; // size=12
-        float x = 0.f;
-        float y = 0.f;
-        float z = 0.f;  // size=12 ; total size=32 = power of two
+    struct Vertex {
+        float s;
+        float t;
+        float nx;
+        float ny;
+        float nz;
+        float x;
+        float y;
+        float z;
     };
 
+    glCreateBuffers(1, &_vbo);
+    glCreateVertexArrays(1, &_vao);
+    glVertexArrayVertexBuffer(_vao, 0, _vbo, 0, sizeof(Vertex));
+
+    glEnableVertexArrayAttrib(_vao, 0);
+    glVertexArrayAttribFormat(_vao, 0, 2, GL_FLOAT, GL_FALSE, 0);
+    glVertexArrayAttribBinding(_vao, 0, 0);
+
+    glEnableVertexArrayAttrib(_vao, 1);
+    glVertexArrayAttribFormat(_vao, 1, 3, GL_FLOAT, GL_FALSE, offsetof(Vertex, nx));
+    glVertexArrayAttribBinding(_vao, 1, 0);
+
+    glEnableVertexArrayAttrib(_vao, 2);
+    glVertexArrayAttribFormat(_vao, 2, 3, GL_FLOAT, GL_FALSE, offsetof(Vertex, x));
+    glVertexArrayAttribBinding(_vao, 2, 0);
 
     const float halfSize = size / 2.f;
-    std::array<VertexData, 36> v;
+    std::array<Vertex, 36> v;
 
     if (mode == TextureMappingMode::Regular) {
         // A (front/+z)
@@ -125,7 +141,8 @@ Box::Box(float size, TextureMappingMode mode) {
         v[34] = { 1.f, 0.f, 0.f, -1.f, 0.f, halfSize, -halfSize, -halfSize };
         v[35] = { 1.f, 0.5f, 0.f, -1.f, 0.f, halfSize, -halfSize, halfSize };
     }
-    else { // skybox
+    else {
+        // Skybox
         // A (front/+z)
         v[0] = { 1.f, 0.666666f, 0.f, 0.f, 1.f, -halfSize, halfSize, halfSize };
         v[1] = { 1.f, 0.333334f, 0.f, 0.f, 1.f, -halfSize, -halfSize, halfSize };
@@ -174,28 +191,7 @@ Box::Box(float size, TextureMappingMode mode) {
         v[34] = { 0.499f, 0.333333f, 0.f, -1.f, 0.f,  halfSize, -halfSize, -halfSize };
         v[35] = { 0.499f, 0.f, 0.f, -1.f, 0.f,  halfSize, -halfSize,  halfSize };
     }
-
-    glGenVertexArrays(1, &_vao);
-    glBindVertexArray(_vao);
-
-    glGenBuffers(1, &_vbo);
-    glBindBuffer(GL_ARRAY_BUFFER, _vbo);
-    constexpr int s = sizeof(VertexData);
-    glBufferData(GL_ARRAY_BUFFER, v.size() * s, v.data(), GL_STATIC_DRAW);
-
-    // texcoords
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, s, nullptr);
-
-    // normals
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, s, reinterpret_cast<void*>(8));
-
-    // vert positions
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, s, reinterpret_cast<void*>(20));
-
-    glBindVertexArray(0);
+    glNamedBufferStorage(_vbo, v.size() * sizeof(Vertex), v.data(), GL_NONE_BIT);
 }
 
 Box::~Box() {
@@ -208,4 +204,3 @@ void Box::draw() const {
     glDrawArrays(GL_TRIANGLES, 0, 36);
     glBindVertexArray(0);
 }
-

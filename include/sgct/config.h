@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,10 +10,13 @@
 #define __SGCT__CONFIG__H__
 
 #include <sgct/sgctexports.h>
+
 #include <sgct/math.h>
+#include <cstdint>
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -363,7 +366,7 @@ struct SGCT_EXPORT Window {
     };
 
     std::optional<ivec2> pos;
-    ivec2 size = ivec2{ 1, 1 };
+    std::optional<ivec2> size;
     std::optional<ivec2> resolution;
     std::vector<Viewport> viewports;
     int8_t id = 0;
@@ -467,15 +470,14 @@ namespace sgct {
 
 /**
  * Reads a JSON configuration file from the provided \p filename. If the loading fails an
- * exception is raised, otherwise a valid #Cluster object is returned.
+ * exception is raised, otherwise a valid Cluster object is returned.
  */
 SGCT_EXPORT [[nodiscard]] config::Cluster readConfig(
     const std::filesystem::path& filename);
 
 /**
  * Reads a JSON-formatted configuration direction from the provided \p configuration. If
- * the loading fails an exception is raised, otherwise a valid #Cluster object is
- * returned.
+ * the loading fails an exception is raised, otherwise a valid Cluster object is returned.
  */
 SGCT_EXPORT [[nodiscard]] config::Cluster readJsonConfig(std::string_view configuration);
 

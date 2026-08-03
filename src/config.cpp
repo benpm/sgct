@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -21,14 +21,17 @@
 #define JSON_HAS_CPP_20
 #define JSON_USE_IMPLICIT_CONVERSIONS 0
 #include <nlohmann/json.hpp>
-
 #include <nlohmann/json-schema.hpp>
 #include <algorithm>
+#include <array>
 #include <cassert>
+#include <cstring>
+#include <exception>
 #include <fstream>
 #include <functional>
 #include <iterator>
 #include <numeric>
+#include <sstream>
 
 #define Err(code, msg) sgct::Error(sgct::Error::Component::Config, code, msg)
 
@@ -464,20 +467,20 @@ std::string GeneratorVersion::versionString() const {
 namespace {
     sgct::config::Window::StereoMode parseStereoType(std::string_view t) {
         using M = sgct::config::Window::StereoMode;
-        if (t == "none" || t == "no_stereo") { return M::NoStereo; }
-        if (t == "active" || t == "quadbuffer") { return M::Active; }
-        if (t == "checkerboard") { return M::Checkerboard; }
-        if (t == "checkerboard_inverted") { return M::CheckerboardInverted; }
-        if (t == "anaglyph_red_cyan") { return M::AnaglyphRedCyan; }
-        if (t == "anaglyph_amber_blue") { return M::AnaglyphAmberBlue; }
-        if (t == "anaglyph_wimmer") { return M::AnaglyphRedCyanWimmer; }
-        if (t == "vertical_interlaced") { return M::VerticalInterlaced; }
+        if (t == "none" || t == "no_stereo")     { return M::NoStereo; }
+        if (t == "active" || t == "quadbuffer")  { return M::Active; }
+        if (t == "checkerboard")                 { return M::Checkerboard; }
+        if (t == "checkerboard_inverted")        { return M::CheckerboardInverted; }
+        if (t == "anaglyph_red_cyan")            { return M::AnaglyphRedCyan; }
+        if (t == "anaglyph_amber_blue")          { return M::AnaglyphAmberBlue; }
+        if (t == "anaglyph_wimmer")              { return M::AnaglyphRedCyanWimmer; }
+        if (t == "vertical_interlaced")          { return M::VerticalInterlaced; }
         if (t == "vertical_interlaced_inverted") { return M::VerticalInterlacedInverted; }
-        if (t == "test" || t == "dummy") { return M::Dummy; }
-        if (t == "side_by_side") { return M::SideBySide; }
-        if (t == "side_by_side_inverted") { return M::SideBySideInverted; }
-        if (t == "top_bottom") { return M::TopBottom; }
-        if (t == "top_bottom_inverted") { return M::TopBottomInverted; }
+        if (t == "test" || t == "dummy")         { return M::Dummy; }
+        if (t == "side_by_side")                 { return M::SideBySide; }
+        if (t == "side_by_side_inverted")        { return M::SideBySideInverted; }
+        if (t == "top_bottom")                   { return M::TopBottom; }
+        if (t == "top_bottom_inverted")          { return M::TopBottomInverted; }
 
         throw Err(6085, std::format("Unknown stereo mode {}", t));
     }
@@ -565,9 +568,7 @@ namespace {
     std::string stringifyJsonFile(const std::filesystem::path& filename) {
         std::ifstream myfile = std::ifstream(filename);
         if (myfile.fail()) {
-            // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-            // formatting std::filesystem::path
-            throw Err(6082, std::format("Failed to open '{}'", filename.string()));
+            throw Err(6082, std::format("Failed to open '{}'", filename));
         }
         std::stringstream buffer;
         buffer << myfile.rdbuf();
@@ -771,7 +772,7 @@ static void from_json(const nlohmann::json& j, User& u) {
         const quat q = it->get<quat>();
         glm::mat4 m = glm::mat4_cast(glm::make_quat(&q.x));
         sgct::mat4 o;
-        std::memcpy(&o, glm::value_ptr(m), 16 * sizeof(float));
+        std::memcpy(o.values.data(), glm::value_ptr(m), 16 * sizeof(float));
         u.transformation = o;
     }
 
@@ -1001,7 +1002,7 @@ static void from_json(const nlohmann::json& j, Tracker& t) {
         const quat q = it->get<quat>();
         glm::mat4 m = glm::mat4_cast(glm::make_quat(&q.x));
         sgct::mat4 o;
-        std::memcpy(&o, glm::value_ptr(m), 16 * sizeof(float));
+        std::memcpy(o.values.data(), glm::value_ptr(m), 16 * sizeof(float));
         t.transformation = o;
     }
 }
@@ -1634,9 +1635,6 @@ static void from_json(const nlohmann::json& j, Window& w) {
         w.scalable->mesh = std::filesystem::current_path() / *mesh;
         parseValue(j, "scalablemesh_ortho_quality", w.scalable->orthographicQuality);
         parseValue(j, "scalablemesh_ortho_res", w.scalable->orthographicResolution);
-
-        // If we have a scalable mesh, we don't want to parse the rest of the values
-        return;
     }
 
 
@@ -2019,12 +2017,7 @@ config::Cluster readConfig(const std::filesystem::path& filename) {
 
     std::filesystem::path name = std::filesystem::absolute(filename);
     if (!std::filesystem::exists(name)) {
-        // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-        // formatting std::filesystem::path
-        throw Err(
-            6081,
-            std::format("Could not find configuration file: {}", name.string())
-        );
+        throw Err(6081, std::format("Could not find configuration file: {}", name));
     }
 
     // First save the old current working directory, set the new one
@@ -2042,12 +2035,12 @@ config::Cluster readConfig(const std::filesystem::path& filename) {
             std::istreambuf_iterator<char>()
         );
         const config::Cluster cluster = readJsonConfig(contents);
-        // and reset the current working directory to the old value
+        // And reset the current working directory to the old value
         std::filesystem::current_path(oldPwd);
         return cluster;
     }
     catch (const nlohmann::json::exception& e) {
-        // and reset the current working directory to the old value
+        // And reset the current working directory to the old value
         std::filesystem::current_path(oldPwd);
         throw Err(6082, e.what());
     }
@@ -2068,37 +2061,45 @@ config::Cluster readJsonConfig(std::string_view configuration) {
 }
 
 config::Cluster defaultCluster() {
-    config::PlanarProjection::FOV fov;
-    fov.down = -(90.f / (16.f / 9.f)) / 2.f;
-    fov.left = -90.f / 2.f;
-    fov.right = 90.f / 2.f;
-    fov.up = (90.f / (16.f / 9.f)) / 2.f;
-    config::PlanarProjection proj;
-    proj.fov = fov;
+    // FOV values based on 16:9 aspect ratio given by the default window size of 1280x720
+    config::PlanarProjection::FOV fov = {
+        .down = -50.534f / 2.f,
+        .left = -80.f / 2.f,
+        .right = 80.f / 2.f,
+        .up = 50.534f / 2.f
+    };
+    config::PlanarProjection proj = {
+        .fov = fov
+    };
 
-    config::Viewport viewport;
-    viewport.projection = proj;
+    config::Viewport viewport = {
+        .projection = proj
+    };
 
-    config::Window window;
-    window.id = 0;
-    window.isFullScreen = false;
-    window.size = ivec2{ 1280, 720 };
-    window.viewports.push_back(viewport);
+    config::Window window = {
+        .size = ivec2{ 1280, 720 },
+        .viewports = { viewport },
+        .id = 0,
+        .isFullScreen = false
+    };
 
-    config::Node node;
-    node.address = "localhost";
-    node.port = 20401;
-    node.windows.push_back(window);
+    config::Node node = {
+        .address = "localhost",
+        .port = 20401,
+        .windows = { window }
+    };
 
-    config::User user;
-    user.eyeSeparation = 0.06f;
-    user.position = vec3{ 0.f, 0.f, 0.f };
+    config::User user = {
+        .eyeSeparation = 0.06f,
+        .position = vec3{ 0.f, 0.f, 0.f }
+    };
 
-    config::Cluster res;
-    res.success = true;
-    res.masterAddress = "localhost";
-    res.nodes.push_back(node);
-    res.users.push_back(user);
+    config::Cluster res = {
+        .success = true,
+        .masterAddress = "localhost",
+        .nodes = { node },
+        .users = { user }
+    };
 
     return res;
 }
@@ -2129,11 +2130,7 @@ std::string validateConfigAgainstSchema(std::string_view configuration,
     const json_validator validator = json_validator(
         schemaInput,
         [&schemaDir](const json_uri& id, json& value) {
-            // @TODO: Remove `.string()` as soon as Clang on MacOS supports
-            // formatting std::filesystem::path
-            std::string loadPath = std::format(
-                "{}/{}", schemaDir.string(), id.to_string()
-            );
+            std::string loadPath = std::format("{}/{}", schemaDir, id.to_string());
             const size_t lbIndex = loadPath.find('#');
             if (lbIndex != std::string::npos) {
                 loadPath = loadPath.substr(0, lbIndex);

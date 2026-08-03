@@ -2,7 +2,7 @@
  * SGCT                                                                                  *
  * Simple Graphics Cluster Toolkit                                                       *
  *                                                                                       *
- * Copyright (c) 2012-2025                                                               *
+ * Copyright (c) 2012-2026                                                               *
  * For conditions of distribution and use, see copyright notice in LICENSE.md            *
  ****************************************************************************************/
 
@@ -10,11 +10,13 @@
 #define __SGCT__CORRECTION_SIMCAD__H__
 
 #include <sgct/sgctexports.h>
+
 #include <sgct/math.h>
-#include <sgct/correction/buffer.h>
 #include <filesystem>
 
 namespace sgct::correction {
+
+struct Buffer;
 
 SGCT_EXPORT Buffer generateSimCADMesh(const std::filesystem::path& path, const vec2& pos,
     const vec2& size);
