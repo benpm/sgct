@@ -3,6 +3,8 @@
 uniform sampler2D sceneTex;
 uniform sampler2D bloomTex;
 uniform float bloomStrength;
+uniform float exposure;
+uniform float gamma;
 
 in vec2 uv;
 out vec4 fragColor;
@@ -24,11 +26,14 @@ void main() {
     // Combine scene with bloom
     vec3 combined = scene + bloom * bloomStrength;
     
+    // Exposure
+    combined *= exposure;
+
     // Tone mapping
     vec3 tonemapped = ACESFilm(combined);
     
     // Gamma correction
-    tonemapped = pow(tonemapped, vec3(1.0 / 2.2));
+    tonemapped = pow(tonemapped, vec3(1.0 / gamma));
     
     fragColor = vec4(tonemapped, 1.0);
 }

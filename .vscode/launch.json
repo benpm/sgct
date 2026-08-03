@@ -5,18 +5,17 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "(Windows) Launch",
-            "type": "cppvsdbg",
+            "name": "simplecube",
+            "type": "lldb",
             "request": "launch",
             "program": "${workspaceRoot}/bin/Debug/simplecube.exe",
             "args": [
                 "--config",
                 "config/single_fisheye_fxaa.json"
             ],
-            "stopAtEntry": false,
             "cwd": "${workspaceRoot}",
-            "console": "internalConsole",
-            "preLaunchTask": "${defaultBuildTask}"
+            "console": "integratedTerminal",
+            "preLaunchTask": "build debug"
         }
     ]
 }

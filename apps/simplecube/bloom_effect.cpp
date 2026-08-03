@@ -301,6 +301,7 @@ void BloomEffect::renderBlurPass() {
 
     glUseProgram(_blurShader);
     glUniform1i(glGetUniformLocation(_blurShader, "brightTex"), 0);
+    glUniform1i(glGetUniformLocation(_blurShader, "mipCount"), _settings.mipLevels);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, _brightFBO.colorTexture);
@@ -339,6 +340,8 @@ void BloomEffect::renderComposite(GLuint inputTexture) {
     glUniform1i(glGetUniformLocation(_compositeShader, "sceneTex"), 0);
     glUniform1i(glGetUniformLocation(_compositeShader, "bloomTex"), 1);
     glUniform1f(glGetUniformLocation(_compositeShader, "bloomStrength"), _settings.bloomStrength);
+    glUniform1f(glGetUniformLocation(_compositeShader, "exposure"), _settings.exposure);
+    glUniform1f(glGetUniformLocation(_compositeShader, "gamma"), _settings.gamma);
 
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, inputTexture);

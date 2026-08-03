@@ -18,6 +18,9 @@ Box::Box(float size, const glm::vec3& position) : _position(position) {
         float x = 0.f;
         float y = 0.f;
         float z = 0.f;
+        float nx = 0.f;
+        float ny = 0.f;
+        float nz = 0.f;
         float r = 0.f;
         float g = 0.f;
         float b = 0.f;
@@ -27,52 +30,52 @@ Box::Box(float size, const glm::vec3& position) : _position(position) {
     std::array<VertexData, 36> v;
 
     // Front face (+z) - Red
-    v[0] = { -halfSize,  halfSize, halfSize, 1.f, 0.f, 0.f };
-    v[1] = { -halfSize, -halfSize, halfSize, 1.f, 0.f, 0.f };
-    v[2] = {  halfSize, -halfSize, halfSize, 1.f, 0.f, 0.f };
-    v[3] = { -halfSize,  halfSize, halfSize, 1.f, 0.f, 0.f };
-    v[4] = {  halfSize, -halfSize, halfSize, 1.f, 0.f, 0.f };
-    v[5] = {  halfSize,  halfSize, halfSize, 1.f, 0.f, 0.f };
+    v[0] = { -halfSize,  halfSize, halfSize, 0.f, 0.f, 1.f, 1.f, 0.f, 0.f };
+    v[1] = { -halfSize, -halfSize, halfSize, 0.f, 0.f, 1.f, 1.f, 0.f, 0.f };
+    v[2] = {  halfSize, -halfSize, halfSize, 0.f, 0.f, 1.f, 1.f, 0.f, 0.f };
+    v[3] = { -halfSize,  halfSize, halfSize, 0.f, 0.f, 1.f, 1.f, 0.f, 0.f };
+    v[4] = {  halfSize, -halfSize, halfSize, 0.f, 0.f, 1.f, 1.f, 0.f, 0.f };
+    v[5] = {  halfSize,  halfSize, halfSize, 0.f, 0.f, 1.f, 1.f, 0.f, 0.f };
 
     // Right face (+x) - Green
-    v[6] = { halfSize,  halfSize,  halfSize, 0.f, 1.f, 0.f };
-    v[7] = { halfSize, -halfSize,  halfSize, 0.f, 1.f, 0.f };
-    v[8] = { halfSize, -halfSize, -halfSize, 0.f, 1.f, 0.f };
-    v[9] = { halfSize,  halfSize,  halfSize, 0.f, 1.f, 0.f };
-    v[10] = { halfSize, -halfSize, -halfSize, 0.f, 1.f, 0.f };
-    v[11] = { halfSize,  halfSize, -halfSize, 0.f, 1.f, 0.f };
+    v[6] = { halfSize,  halfSize,  halfSize, 1.f, 0.f, 0.f, 0.f, 1.f, 0.f };
+    v[7] = { halfSize, -halfSize,  halfSize, 1.f, 0.f, 0.f, 0.f, 1.f, 0.f };
+    v[8] = { halfSize, -halfSize, -halfSize, 1.f, 0.f, 0.f, 0.f, 1.f, 0.f };
+    v[9] = { halfSize,  halfSize,  halfSize, 1.f, 0.f, 0.f, 0.f, 1.f, 0.f };
+    v[10] = { halfSize, -halfSize, -halfSize, 1.f, 0.f, 0.f, 0.f, 1.f, 0.f };
+    v[11] = { halfSize,  halfSize, -halfSize, 1.f, 0.f, 0.f, 0.f, 1.f, 0.f };
 
     // Back face (-z) - Blue
-    v[12] = {  halfSize,  halfSize, -halfSize, 0.f, 0.f, 1.f };
-    v[13] = {  halfSize, -halfSize, -halfSize, 0.f, 0.f, 1.f };
-    v[14] = { -halfSize, -halfSize, -halfSize, 0.f, 0.f, 1.f };
-    v[15] = {  halfSize,  halfSize, -halfSize, 0.f, 0.f, 1.f };
-    v[16] = { -halfSize, -halfSize, -halfSize, 0.f, 0.f, 1.f };
-    v[17] = { -halfSize,  halfSize, -halfSize, 0.f, 0.f, 1.f };
+    v[12] = {  halfSize,  halfSize, -halfSize, 0.f, 0.f, -1.f, 0.f, 0.f, 1.f };
+    v[13] = {  halfSize, -halfSize, -halfSize, 0.f, 0.f, -1.f, 0.f, 0.f, 1.f };
+    v[14] = { -halfSize, -halfSize, -halfSize, 0.f, 0.f, -1.f, 0.f, 0.f, 1.f };
+    v[15] = {  halfSize,  halfSize, -halfSize, 0.f, 0.f, -1.f, 0.f, 0.f, 1.f };
+    v[16] = { -halfSize, -halfSize, -halfSize, 0.f, 0.f, -1.f, 0.f, 0.f, 1.f };
+    v[17] = { -halfSize,  halfSize, -halfSize, 0.f, 0.f, -1.f, 0.f, 0.f, 1.f };
 
     // Left face (-x) - Yellow
-    v[18] = { -halfSize,  halfSize, -halfSize, 1.f, 1.f, 0.f };
-    v[19] = { -halfSize, -halfSize, -halfSize, 1.f, 1.f, 0.f };
-    v[20] = { -halfSize, -halfSize,  halfSize, 1.f, 1.f, 0.f };
-    v[21] = { -halfSize,  halfSize, -halfSize, 1.f, 1.f, 0.f };
-    v[22] = { -halfSize, -halfSize,  halfSize, 1.f, 1.f, 0.f };
-    v[23] = { -halfSize,  halfSize,  halfSize, 1.f, 1.f, 0.f };
+    v[18] = { -halfSize,  halfSize, -halfSize, -1.f, 0.f, 0.f, 1.f, 1.f, 0.f };
+    v[19] = { -halfSize, -halfSize, -halfSize, -1.f, 0.f, 0.f, 1.f, 1.f, 0.f };
+    v[20] = { -halfSize, -halfSize,  halfSize, -1.f, 0.f, 0.f, 1.f, 1.f, 0.f };
+    v[21] = { -halfSize,  halfSize, -halfSize, -1.f, 0.f, 0.f, 1.f, 1.f, 0.f };
+    v[22] = { -halfSize, -halfSize,  halfSize, -1.f, 0.f, 0.f, 1.f, 1.f, 0.f };
+    v[23] = { -halfSize,  halfSize,  halfSize, -1.f, 0.f, 0.f, 1.f, 1.f, 0.f };
 
     // Top face (+y) - Magenta
-    v[24] = { -halfSize, halfSize, -halfSize, 1.f, 0.f, 1.f };
-    v[25] = { -halfSize, halfSize,  halfSize, 1.f, 0.f, 1.f };
-    v[26] = {  halfSize, halfSize,  halfSize, 1.f, 0.f, 1.f };
-    v[27] = { -halfSize, halfSize, -halfSize, 1.f, 0.f, 1.f };
-    v[28] = {  halfSize, halfSize,  halfSize, 1.f, 0.f, 1.f };
-    v[29] = {  halfSize, halfSize, -halfSize, 1.f, 0.f, 1.f };
+    v[24] = { -halfSize, halfSize, -halfSize, 0.f, 1.f, 0.f, 1.f, 0.f, 1.f };
+    v[25] = { -halfSize, halfSize,  halfSize, 0.f, 1.f, 0.f, 1.f, 0.f, 1.f };
+    v[26] = {  halfSize, halfSize,  halfSize, 0.f, 1.f, 0.f, 1.f, 0.f, 1.f };
+    v[27] = { -halfSize, halfSize, -halfSize, 0.f, 1.f, 0.f, 1.f, 0.f, 1.f };
+    v[28] = {  halfSize, halfSize,  halfSize, 0.f, 1.f, 0.f, 1.f, 0.f, 1.f };
+    v[29] = {  halfSize, halfSize, -halfSize, 0.f, 1.f, 0.f, 1.f, 0.f, 1.f };
 
     // Bottom face (-y) - Cyan
-    v[30] = { -halfSize, -halfSize,  halfSize, 0.f, 1.f, 1.f };
-    v[31] = { -halfSize, -halfSize, -halfSize, 0.f, 1.f, 1.f };
-    v[32] = {  halfSize, -halfSize, -halfSize, 0.f, 1.f, 1.f };
-    v[33] = { -halfSize, -halfSize,  halfSize, 0.f, 1.f, 1.f };
-    v[34] = {  halfSize, -halfSize, -halfSize, 0.f, 1.f, 1.f };
-    v[35] = {  halfSize, -halfSize,  halfSize, 0.f, 1.f, 1.f };
+    v[30] = { -halfSize, -halfSize,  halfSize, 0.f, -1.f, 0.f, 0.f, 1.f, 1.f };
+    v[31] = { -halfSize, -halfSize, -halfSize, 0.f, -1.f, 0.f, 0.f, 1.f, 1.f };
+    v[32] = {  halfSize, -halfSize, -halfSize, 0.f, -1.f, 0.f, 0.f, 1.f, 1.f };
+    v[33] = { -halfSize, -halfSize,  halfSize, 0.f, -1.f, 0.f, 0.f, 1.f, 1.f };
+    v[34] = {  halfSize, -halfSize, -halfSize, 0.f, -1.f, 0.f, 0.f, 1.f, 1.f };
+    v[35] = {  halfSize, -halfSize,  halfSize, 0.f, -1.f, 0.f, 0.f, 1.f, 1.f };
 
     glGenVertexArrays(1, &_vao);
     glBindVertexArray(_vao);
@@ -86,9 +89,13 @@ Box::Box(float size, const glm::vec3& position) : _position(position) {
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, s, nullptr);
 
-    // Color attribute
+    // Normal attribute
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, s, reinterpret_cast<void*>(12));
+
+    // Color attribute
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, s, reinterpret_cast<void*>(24));
 
     glBindVertexArray(0);
 }

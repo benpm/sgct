@@ -36,12 +36,15 @@
 		},
 		{
 			"label": "configure debug",
-			"command": "${config:}",
+			"command": "cmake",
 			"args": [
 				"--preset",
 				"debug"
 			],
 			"group": "build",
+			"runOptions": {
+				"instanceLimit": 1
+			},
 			"icon": {
 				"id": "gear",
 				"color": "terminal.ansiBlue"

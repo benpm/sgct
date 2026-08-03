@@ -22,7 +22,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#ifdef WIN32
+#if defined(_WIN32) || defined(__CYGWIN__)
   #include <glad/glad_wgl.h>
 #endif
 
@@ -33,6 +33,11 @@ static void* get_proc(const char *namez);
 #undef APIENTRY
 #endif
 #include <windows.h>
+
+#ifndef APIENTRYP
+#define APIENTRYP APIENTRY *
+#endif
+
 static HMODULE libGL;
 
 typedef void* (APIENTRYP PFNWGLGETPROCADDRESSPROC_PRIVATE)(const char*);

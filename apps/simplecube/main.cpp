@@ -32,6 +32,13 @@
 namespace {
     std::vector<std::unique_ptr<Box>> boxes;
     GLint matrixLoc = -1;
+    GLint modelMatrixLoc = -1;
+    GLint normalMatrixLoc = -1;
+    GLint lightPosLoc = -1;
+    GLint lightPosLoc = -1;
+    GLint viewPosLoc = -1;
+    GLint brightnessLoc = -1;
+    float sceneBrightness = 1.0f;
     double currentTime = 0.0;
     bool firstFrameValidated = false;
     bool testingMode = false;
@@ -71,23 +78,61 @@ namespace {
   #version 330 core
 
   layout(location = 0) in vec3 vertPosition;
-  layout(location = 1) in vec3 vertColor;
+  layout(location = 1) in vec3 vertNormal;
+  layout(location = 2) in vec3 vertColor;
 
   uniform mat4 mvp;
+  uniform mat4 modelMatrix;
+  uniform mat3 normalMatrix;
+
+  out vec3 fragPosition;
+  out vec3 fragNormal;
   out vec3 fragColor;
 
   void main() {
     gl_Position = mvp * vec4(vertPosition, 1.0);
+    fragPosition = vec3(modelMatrix * vec4(vertPosition, 1.0));
+    fragNormal = normalize(normalMatrix * vertNormal);
     fragColor = vertColor;
   })";
 
     constexpr std::string_view FragmentShader = R"(
   #version 330 core
 
+  in vec3 fragPosition;
+  in vec3 fragNormal;
   in vec3 fragColor;
   out vec4 color;
 
-  void main() { color = vec4(fragColor, 1.0); }
+  out vec4 color;
+
+  uniform float brightness;
+  uniform vec3 lightPos;
+  uniform vec3 viewPos;
+
+  void main() {
+    // Ambient lighting (low intensity)
+    float ambientStrength = 0.1;
+    vec3 ambient = ambientStrength * fragColor;
+
+    // Diffuse lighting (main light source - 10x ambient)
+    vec3 norm = normalize(fragNormal);
+    vec3 lightDir = normalize(lightPos - fragPosition);
+    float diff = max(dot(norm, lightDir), 0.0);
+    vec3 diffuse = diff * fragColor;
+
+    // Specular lighting (bright highlights)
+    float specularStrength = 0.5;
+    vec3 viewDir = normalize(viewPos - fragPosition);
+    vec3 reflectDir = reflect(-lightDir, norm);
+    float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
+    vec3 specular = specularStrength * spec * vec3(1.0, 1.0, 1.0);
+
+    // Combine all components
+    // Combine all components
+    vec3 result = (ambient + diffuse + specular) * brightness;
+    color = vec4(result, 1.0);
+  }
 )";
 
     GLint postProcessTexLoc = -1;
@@ -151,6 +196,12 @@ void initOGL(GLFWwindow* sharedWindow) {
     const ShaderProgram& prg = ShaderManager::instance().shaderProgram("xform");
     prg.bind();
     matrixLoc = glGetUniformLocation(prg.id(), "mvp");
+    modelMatrixLoc = glGetUniformLocation(prg.id(), "modelMatrix");
+    normalMatrixLoc = glGetUniformLocation(prg.id(), "normalMatrix");
+    lightPosLoc = glGetUniformLocation(prg.id(), "lightPos");
+    lightPosLoc = glGetUniformLocation(prg.id(), "lightPos");
+    viewPosLoc = glGetUniformLocation(prg.id(), "viewPos");
+    brightnessLoc = glGetUniformLocation(prg.id(), "brightness");
     prg.unbind();
 
     // Initialize post-process shaders from files
@@ -200,6 +251,15 @@ void draw(const RenderData& data) {
     );
 
     ShaderManager::instance().shaderProgram("xform").bind();
+    glUniform1f(brightnessLoc, sceneBrightness);
+
+    // Set light position (bright light above and to the side)
+    glm::vec3 lightPos(10.f, 15.f, 5.f);
+    glUniform3fv(lightPosLoc, 1, glm::value_ptr(lightPos));
+
+    // Set view position (camera position)
+    glm::vec3 viewPos(0.f, 0.f, 0.f);
+    glUniform3fv(viewPosLoc, 1, glm::value_ptr(viewPos));
 
     // Draw each box at its position
     for (const auto& box : boxes) {
@@ -207,7 +267,12 @@ void draw(const RenderData& data) {
         const glm::mat4 mvp =
             glm::make_mat4(data.modelViewProjectionMatrix.values.data()) * boxTransform;
 
+        // Calculate normal matrix (inverse transpose of model matrix)
+        glm::mat3 normalMatrix = glm::transpose(glm::inverse(glm::mat3(boxTransform)));
+
         glUniformMatrix4fv(matrixLoc, 1, GL_FALSE, glm::value_ptr(mvp));
+        glUniformMatrix4fv(modelMatrixLoc, 1, GL_FALSE, glm::value_ptr(boxTransform));
+        glUniformMatrix3fv(normalMatrixLoc, 1, GL_FALSE, glm::value_ptr(normalMatrix));
         box->draw();
     }
 
@@ -377,11 +442,21 @@ void draw2D(const RenderData&) {
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Clamp bright values to prevent fireflies");
             }
+
+            ImGui::SliderFloat("Exposure", &settings.exposure, 0.1f, 5.0f, "%.2f");
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Scene exposure before tone mapping");
+            }
+
+            ImGui::SliderFloat("Gamma", &settings.gamma, 0.1f, 5.0f, "%.2f");
+            if (ImGui::IsItemHovered()) {
+                ImGui::SetTooltip("Gamma correction value (default 2.2)");
+            }
             ImGui::Separator();
 
             // Quality settings
             ImGui::Text("Quality Settings");
-            ImGui::SliderInt("Mip Levels", &settings.mipLevels, 1, 8);
+            ImGui::SliderInt("Mip Levels", &settings.mipLevels, 1, 10);
             if (ImGui::IsItemHovered()) {
                 ImGui::SetTooltip("Number of mip levels to sample (more = wider blur)");
             }
@@ -428,6 +503,10 @@ void draw2D(const RenderData&) {
         ImGui::Separator();
         ImGui::Text("Press H to toggle this panel");
         ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+
+        ImGui::Separator();
+        ImGui::Text("Scene Settings");
+        ImGui::SliderFloat("Scene Brightness", &sceneBrightness, 0.0f, 5.0f, "%.2f");
     }
     ImGui::End();
 

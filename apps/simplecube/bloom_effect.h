@@ -21,6 +21,8 @@ public:
         float maxBrightness = 10.0f;
         int mipLevels = 6;
         bool useTentFilter = true;
+        float gamma = 2.2f;
+        float exposure = 1.0f;
     };
 
     BloomEffect(int width, int height);
