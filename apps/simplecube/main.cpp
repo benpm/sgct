@@ -35,7 +35,6 @@ namespace {
     GLint modelMatrixLoc = -1;
     GLint normalMatrixLoc = -1;
     GLint lightPosLoc = -1;
-    GLint lightPosLoc = -1;
     GLint viewPosLoc = -1;
     GLint brightnessLoc = -1;
     float sceneBrightness = 1.0f;
@@ -198,7 +197,6 @@ void initOGL(GLFWwindow* sharedWindow) {
     matrixLoc = glGetUniformLocation(prg.id(), "mvp");
     modelMatrixLoc = glGetUniformLocation(prg.id(), "modelMatrix");
     normalMatrixLoc = glGetUniformLocation(prg.id(), "normalMatrix");
-    lightPosLoc = glGetUniformLocation(prg.id(), "lightPos");
     lightPosLoc = glGetUniformLocation(prg.id(), "lightPos");
     viewPosLoc = glGetUniformLocation(prg.id(), "viewPos");
     brightnessLoc = glGetUniformLocation(prg.id(), "brightness");

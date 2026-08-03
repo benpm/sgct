@@ -118,7 +118,7 @@ else ()
   find_package(glfw3 REQUIRED)
 endif ()
 
-# ImGui (uses sources from Tracy)
+# ImGui (submodule in ext/imgui/imgui, used by example apps)
 if (SGCT_EXAMPLES)
   add_subdirectory(imgui)
   set_property(TARGET imgui PROPERTY FOLDER "External")

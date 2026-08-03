@@ -31,3 +31,6 @@
 [submodule "support/cmake/common-compile-settings"]
 	path = support/cmake/common-compile-settings
 	url = https://github.com/OpenSpace/common-compile-settings
+[submodule "ext/imgui/imgui"]
+	path = ext/imgui/imgui
+	url = https://github.com/ocornut/imgui.git

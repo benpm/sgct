@@ -1,10 +1,9 @@
 ##########################################################################################
 # SGCT - ImGui Integration                                                               #
-# Uses ImGui sources from Tracy profiler                                                 #
 ##########################################################################################
 
-set(IMGUI_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../tracy/imgui")
-set(IMGUI_BACKEND_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../tracy/profiler/src/imgui")
+set(IMGUI_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/imgui")
+set(IMGUI_BACKEND_DIR "${CMAKE_CURRENT_SOURCE_DIR}/imgui/backends")
 
 add_library(imgui STATIC
     ${IMGUI_SOURCE_DIR}/imgui.cpp

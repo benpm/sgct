@@ -16,7 +16,10 @@
         "BUILD_SHARED_LIBS": "OFF",
         "SGCT_FREETYPE_SUPPORT": "OFF",
         "SGCT_DEP_INCLUDE_FREETYPE": "OFF",
-        "CMAKE_CXX_COMPILER_LAUNCHER": "python;${sourceDir}/clang-wrapper.py"
+        "CMAKE_C_COMPILER": "clang-cl",
+        "CMAKE_CXX_COMPILER": "clang-cl",
+        "CMAKE_LINKER_TYPE": "LLD",
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
       }
     }
   ],
