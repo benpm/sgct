@@ -1837,21 +1837,18 @@ void Window::renderViewports(FrustumMode frustum, Eye eye) const {
             glPopDebugGroup();
         }
 
-        // Final blit to output eye texture if needed
+        // Final copy to the output eye texture if the last pass ended in intermediate
         if (texColorOut[curOutIdx] != frameBufferTextureEye(eye)) {
-            // final texture is in intermediate, need to blit to eye texture
+            // The FBO still has the intermediate texture (holding the final image)
+            // attached; copy it into the eye texture, then re-attach the eye texture so
+            // subsequent 2D rendering composites on top of it
             _finalFBO->bind();
-            _finalFBO->attachColorTexture(
-                frameBufferTextureEye(eye),
-                GL_COLOR_ATTACHMENT0
-            );
             glReadBuffer(GL_COLOR_ATTACHMENT0);
 
             const ivec2 framebufferSize = framebufferResolution();
-            glViewport(0, 0, framebufferSize.x, framebufferSize.y);
 
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, _frameBufferTextures.intermediate);
+            glBindTexture(GL_TEXTURE_2D, frameBufferTextureEye(eye));
 
             glCopyTexSubImage2D(
                 GL_TEXTURE_2D,
@@ -1860,6 +1857,11 @@ void Window::renderViewports(FrustumMode frustum, Eye eye) const {
                 0, 0,           // x, y from framebuffer
                 framebufferSize.x,
                 framebufferSize.y
+            );
+
+            _finalFBO->attachColorTexture(
+                frameBufferTextureEye(eye),
+                GL_COLOR_ATTACHMENT0
             );
         }
 

@@ -103,8 +103,6 @@ namespace {
   in vec3 fragColor;
   out vec4 color;
 
-  out vec4 color;
-
   uniform float brightness;
   uniform vec3 lightPos;
   uniform vec3 viewPos;
@@ -127,7 +125,6 @@ namespace {
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), 32.0);
     vec3 specular = specularStrength * spec * vec3(1.0, 1.0, 1.0);
 
-    // Combine all components
     // Combine all components
     vec3 result = (ambient + diffuse + specular) * brightness;
     color = vec4(result, 1.0);
