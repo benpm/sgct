@@ -482,7 +482,7 @@ Buffer generateScalableMesh(const std::filesystem::path& path, BaseViewport& par
         v.b = vertex.intensity / 255.f;
         v.a = 1.f;
         v.s = (1.f - vertex.t) * parent.size().x + parent.position().x;
-        v.t = (1.f - vertex.s) * parent.size().x + parent.position().x;
+        v.t = (1.f - vertex.s) * parent.size().y + parent.position().y;
 
         buf.vertices.push_back(v);
     }

@@ -45,13 +45,13 @@ class User;
  * path is provided, a default setup consisting of a FOV-based rendering with a 1280x720
  * window with is loaded instead.
  *
- * \param path The path to the configuration that should be loaded
- * \return The loaded Cluster object that contains all of the information from the file
+ * If the file cannot be found or cannot be parsed, the reason is printed and a Cluster
+ * whose `success` flag is `false` is returned, so callers should check that flag before
+ * using the result.
  *
- * \exception std::runtime_error This exception is thrown whenever an unrecoverable error
- *            occurs while trying to load the provided path. This error is never raised
- *            when providing no path
- * \pre The \p path, if it is provided, must be an existing file
+ * \param path The path to the configuration that should be loaded
+ * \return The loaded Cluster object that contains all of the information from the file,
+ *         or a Cluster with `success == false` if the path could not be loaded
  */
 SGCT_EXPORT config::Cluster loadCluster(
     std::optional<std::filesystem::path> path = std::nullopt);
@@ -623,6 +623,12 @@ private:
 
     unsigned int _frameCounter = 0;
     unsigned int _shotCounter = 0;
+
+    /// Frame on which an automatic screenshot of all windows is taken (1-based)
+    std::optional<unsigned int> _captureFrame;
+
+    /// Number of frames to render before the render loop terminates by itself
+    std::optional<unsigned int> _exitAfterFrame;
 };
 
 } // namespace sgct

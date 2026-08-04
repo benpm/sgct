@@ -252,7 +252,8 @@ Buffer generateOBJMesh(const std::filesystem::path& path) {
             );
         }
 
-        if (f.f1 < 0 || f.f2 < 0 || f.f3 < 0) {
+        // 0 is not a valid 1-based index; negative values are relative indices
+        if (f.f1 <= 0 || f.f2 <= 0 || f.f3 <= 0) {
             throw Error(
                 Error::Component::OBJ, 2033,
                 std::format(

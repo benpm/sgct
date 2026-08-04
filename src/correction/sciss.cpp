@@ -146,6 +146,13 @@ Buffer generateScissMesh(const std::filesystem::path& path, BaseViewport& parent
             "Number of vertices: {} ({}x{})", nVertices, size[0], size[1]
         ));
     }
+    if (nVertices == 0 || nVertices > (1 << 24)) {
+        throw Err(
+            2075,
+            std::format("Invalid vertex count {} in file '{}'", nVertices, path)
+        );
+    }
+
     // Read vertices
     std::vector<SCISSTexturedVertex> texturedVertexList(nVertices);
     file.read(
@@ -168,6 +175,12 @@ Buffer generateScissMesh(const std::filesystem::path& path, BaseViewport& parent
     Log::Debug(std::format("Number of indices: {}", nIndices));
 
     // Read faces
+    if (nIndices > (1 << 26)) {
+        throw Err(
+            2077,
+            std::format("Invalid index count {} in file '{}'", nIndices, path)
+        );
+    }
     if (nIndices > 0) {
         buf.indices.resize(nIndices);
         file.read(
@@ -218,7 +231,7 @@ Buffer generateScissMesh(const std::filesystem::path& path, BaseViewport& parent
         vertex.a = 1.f;
     }
 
-    if (fileVersion == '2' && size[0] == 4) {
+    if (fileVersion == 2 && size[0] == 4) {
         buf.geometryType = GL_TRIANGLES;
     }
     else {

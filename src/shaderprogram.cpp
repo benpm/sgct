@@ -57,6 +57,7 @@ namespace {
                 sgct::Log::Error(std::format(
                     "{} compile error: Unknown error", shaderTypeName(type)
                 ));
+                return;
             }
 
             std::vector<GLchar> log(logLength);
@@ -86,6 +87,7 @@ ShaderProgram::~ShaderProgram() {
 
 ShaderProgram& ShaderProgram::operator=(ShaderProgram&& rhs) noexcept {
     if (&rhs != this) {
+        deleteProgram();
         _name = std::move(rhs._name);
         _programId = rhs._programId;
         rhs._programId = 0;

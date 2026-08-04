@@ -193,7 +193,6 @@ config::Cluster loadCluster(std::optional<std::filesystem::path> path) {
     ZoneScoped;
 
     if (path) {
-        assert(std::filesystem::exists(*path) && std::filesystem::is_regular_file(*path));
         try {
             Log::Debug(std::format("Parsing config '{}'", path->string()));
             config::Cluster cluster = readConfig(*path);
@@ -210,13 +209,17 @@ config::Cluster loadCluster(std::optional<std::filesystem::path> path) {
             return cluster;
         }
         catch (const std::runtime_error& e) {
-            std::cout << e.what() << '\n';
-            std::cout << helpMessage() << '\n';
-            throw;
+            // A bad path or a malformed file is a user error rather than a programming
+            // error, so it is reported through the `success` flag of the returned
+            // cluster instead of escaping into the application
+            Log::Error(e.what());
+            std::cout << e.what() << '\n' << helpMessage() << std::endl;
+            return config::Cluster();
         }
         catch (...) {
-            std::cout << helpMessage() << '\n';
-            throw;
+            Log::Error(std::format("Failed to load config '{}'", path->string()));
+            std::cout << helpMessage() << std::endl;
+            return config::Cluster();
         }
     }
     else {
@@ -239,6 +242,8 @@ Engine::Engine(config::Cluster cluster, Callbacks callbacks, const Configuration
     , _postProcessFn(std::move(callbacks.postProcess))
     , _cleanupFn(std::move(callbacks.cleanup))
     , _settings(createSettings(cluster, config))
+    , _captureFrame(config.captureFrame)
+    , _exitAfterFrame(config.exitAfterFrame)
 {
     ZoneScoped;
 
@@ -683,8 +688,8 @@ void Engine::frameLockPreStage() {
         addValue(_statistics.syncTimes, static_cast<float>(glfwGetTime() - ts));
     }
 
-    // Run only on clients
-    if (nm.isComputerServer() && !ClusterManager::instance().ignoreSync()) {
+    // Run only on clients that are not ignoring the synchronization
+    if (nm.isComputerServer() || ClusterManager::instance().ignoreSync()) {
         return;
     }
 
@@ -746,12 +751,12 @@ void Engine::frameLockPostStage() {
         }
         // More than a second
         for (int i = 0; i < nm.syncConnectionsCount(); i++) {
-            if (_settings.printSyncMessage && !nm.connection(i).isUpdated()) {
+            if (_settings.printSyncMessage && !nm.syncConnection(i).isUpdated()) {
                 Log::Info(std::format(
                     "Waiting for IG {}: send frame {} != recv frame {}\n\tSwap groups: {}"
                     "\n\tSwap barrier: {}\n\tUniversal frame number: {}\n\t"
-                    "SGCT frame number: {}", i, nm.connection(i).sendFrameCurrent(),
-                    nm.connection(i).recvFrameCurrent(),
+                    "SGCT frame number: {}", i, nm.syncConnection(i).sendFrameCurrent(),
+                    nm.syncConnection(i).recvFrameCurrent(),
                     Window::isUsingSwapGroups() ? "enabled" : "disabled",
                     Window::isBarrierActive() ? "enabled" : "disabled",
                     Window::swapGroupFrameNumber(), _frameCounter
@@ -788,6 +793,11 @@ void Engine::exec() {
             TrackingManager::instance().updateTrackingDevices();
         }
 #endif // SGCT_HAS_VRPN
+
+        // Frame numbers used by --capture-frame are 1-based, _frameCounter is 0-based
+        if (_captureFrame && (_frameCounter + 1) == *_captureFrame) {
+            _shouldTakeScreenshot = true;
+        }
 
         {
             ZoneScopedN("GLFW Poll Events");
@@ -908,6 +918,11 @@ void Engine::exec() {
             _shotCounter++;
         }
         _shouldTakeScreenshot = false;
+
+        if (_exitAfterFrame && _frameCounter >= *_exitAfterFrame) {
+            Log::Info(std::format("Reached frame {}, terminating", _frameCounter));
+            _shouldTerminate = true;
+        }
     }
 
     Window::makeSharedContextCurrent();

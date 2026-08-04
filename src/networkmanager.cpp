@@ -308,8 +308,9 @@ void NetworkManager::initialize() {
         // If client
         if (!_isServer) {
             addConnection(cm.thisNode().syncPort(), remoteAddress);
+            // bind_front by value would decode into a copy of the singleton
             _networkConnections.back()->setDecodeFunction(
-                std::bind_front(&SharedData::decode, SharedData::instance())
+                std::bind_front(&SharedData::decode, &SharedData::instance())
             );
 
             // Add data transfer connection

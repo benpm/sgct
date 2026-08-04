@@ -641,7 +641,7 @@ void Window::openWindow(GLFWwindow* share, bool isLastWindow) {
         );
         _screenCaptureRight = std::make_unique<ScreenCapture>(
             *this,
-            ScreenCapture::EyeIndex::Mono,
+            ScreenCapture::EyeIndex::StereoRight,
             bytesPerColor,
             colorDataType,
             _hasAlpha
@@ -1278,7 +1278,7 @@ void Window::swapBuffers(bool takeScreenshot) {
                 );
             }
             if (_screenCaptureRight && _stereoMode == StereoMode::Active) {
-                _screenCaptureLeftOrMono->saveScreenCapture(
+                _screenCaptureRight->saveScreenCapture(
                     0,
                     ScreenCapture::CaptureSource::RightBackBuffer
                 );
@@ -1607,6 +1607,8 @@ void Window::destroyFBOs() {
     _frameBufferTextures.depth = 0;
     glDeleteTextures(1, &_frameBufferTextures.intermediate);
     _frameBufferTextures.intermediate = 0;
+    glDeleteTextures(1, &_frameBufferTextures.normals);
+    _frameBufferTextures.normals = 0;
     glDeleteTextures(1, &_frameBufferTextures.positions);
     _frameBufferTextures.positions = 0;
 }
@@ -1951,11 +1953,10 @@ void Window::blitWindowViewport(const Window& prevWindow, const Viewport& viewpo
     const unsigned int tex = [&prevWindow](FrustumMode v) {
         switch (v) {
             case FrustumMode::Mono:
-                return prevWindow._frameBufferTextures.leftEye;
             case FrustumMode::StereoLeft:
-                return prevWindow._frameBufferTextures.rightEye;
+                return prevWindow._frameBufferTextures.leftEye;
             case FrustumMode::StereoRight:
-                return prevWindow._frameBufferTextures.intermediate;
+                return prevWindow._frameBufferTextures.rightEye;
             default:
                 throw std::logic_error("Missing case label");
         }

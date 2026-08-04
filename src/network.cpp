@@ -50,6 +50,10 @@
 namespace {
     constexpr int MaxNumberOfAttempts = 10;
 
+    // Sanity cap for wire-supplied buffer sizes; a corrupted or hostile header would
+    // otherwise drive std::vector::resize into std::length_error/std::bad_alloc
+    constexpr uint32_t MaxDataSize = 1 << 30;
+
     constexpr int MaxNetworkSyncFrameNumber = 10000;
 
     int receiveData(SGCT_SOCKET lsocket, char* buffer, int length, int flags) {
@@ -287,7 +291,7 @@ void Network::connectionHandler() {
                     try {
                         communicationHandler();
                     }
-                    catch (const std::runtime_error& e) {
+                    catch (const std::exception& e) {
                         Log::Error(e.what());
                     }
                 });
@@ -305,7 +309,7 @@ void Network::connectionHandler() {
             try {
                 communicationHandler();
             }
-            catch (const std::runtime_error& e) {
+            catch (const std::exception& e) {
                 Log::Error(e.what());
             }
         });
@@ -473,7 +477,6 @@ int Network::readSyncMessage(char* header, int32_t& syncFrame, uint32_t& dataSiz
             std::memcpy(&dataSize, header + 5, sizeof(dataSize));
             std::memcpy(&uncompressedDataSize, header + 9, sizeof(uncompressedDataSize));
 
-            setRecvFrame(syncFrame);
             if (syncFrame < 0) {
                 throw Err(
                     5010,
@@ -482,6 +485,15 @@ int Network::readSyncMessage(char* header, int32_t& syncFrame, uint32_t& dataSiz
                     )
                 );
             }
+            if (dataSize > MaxDataSize || uncompressedDataSize > MaxDataSize) {
+                throw Err(
+                    5010,
+                    std::format(
+                        "Unreasonable data size {} for connection {}", dataSize, _id
+                    )
+                );
+            }
+            setRecvFrame(syncFrame);
 
             // Resize buffer if needed
             updateBuffer(_recvBuffer, dataSize, _bufferSize);
@@ -513,6 +525,15 @@ int Network::readDataTransferMessage(char* header, int32_t& packageId, uint32_t&
             std::memcpy(&packageId, header + 1, sizeof(packageId));
             std::memcpy(&dataSize, header + 5, sizeof(dataSize));
             std::memcpy(&uncompressedDataSize, header + 9, sizeof(uncompressedDataSize));
+
+            if (dataSize > MaxDataSize || uncompressedDataSize > MaxDataSize) {
+                throw Err(
+                    5010,
+                    std::format(
+                        "Unreasonable data size {} for connection {}", dataSize, _id
+                    )
+                );
+            }
 
             // Resize buffer if needed
             updateBuffer(_recvBuffer, dataSize, _bufferSize);
@@ -652,11 +673,14 @@ void Network::communicationHandler() {
             Log::Info(std::format("TCP connection {} closed", _id));
         }
         else if (iResult < 0) {
+            // Don't throw here: the socket close and the status-update callback below
+            // must still run or the peer is never reported as disconnected and can
+            // never reconnect
             setConnectedStatus(false);
-            throw Err(
-                5013,
-                std::format("TCP connection {} receive failed: {}", _id, SGCT_ERRNO)
-            );
+            Log::Error(std::format(
+                "TCP connection {} receive failed: {}", _id, SGCT_ERRNO
+            ));
+            break;
         }
 
         if (type() == ConnectionType::SyncConnection) {
@@ -790,7 +814,8 @@ void Network::initShutdown() {
     ZoneScoped;
 
     if (_isConnected) {
-        constexpr std::array<char, 9> GameOver = {
+        // Must be a full header; readSyncMessage always consumes HeaderSize bytes
+        constexpr std::array<char, HeaderSize> GameOver = {
             DisconnectId, 24, '\r', '\n', 27, '\r', '\n', '\0', DefaultId
         };
         sendData(GameOver.data(), HeaderSize);

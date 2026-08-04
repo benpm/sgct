@@ -371,7 +371,8 @@ void validateCluster(const Cluster& c) {
         std::back_inserter(usernames),
         [](const User& user) { return user.name.value_or(""); }
     );
-    if (std::unique(usernames.begin(), usernames.end()) != usernames.end()) {
+    std::sort(usernames.begin(), usernames.end());
+    if (std::adjacent_find(usernames.begin(), usernames.end()) != usernames.end()) {
         throw Err(1124, "No two users can have the same name");
     }
 
@@ -1085,7 +1086,8 @@ static void from_json(const nlohmann::json& j, PlanarProjection::FOV& f) {
 static void to_json(nlohmann::json& j, const PlanarProjection::FOV& f) {
     j = nlohmann::json::object();
 
-    if (f.left == f.right) {
+    // left/down are stored negated (see from_json), so a symmetric fov has -left == right
+    if (-f.left == f.right) {
         j["hfov"] = -f.left + f.right;
     }
     else {
@@ -1093,7 +1095,7 @@ static void to_json(nlohmann::json& j, const PlanarProjection::FOV& f) {
         j["right"] = f.right;
     }
 
-    if (f.down == f.up) {
+    if (-f.down == f.up) {
         j["vfov"] = -f.down + f.up;
     }
     else {
@@ -1767,6 +1769,10 @@ static void to_json(nlohmann::json& j, const Window& w) {
         j["hidden"] = *w.isHidden;
     }
 
+    if (w.alpha.has_value()) {
+        j["alpha"] = *w.alpha;
+    }
+
     if (w.msaa.has_value()) {
         j["msaa"] = *w.msaa;
     }
@@ -1819,7 +1825,9 @@ static void to_json(nlohmann::json& j, const Window& w) {
         j["pos"] = *w.pos;
     }
 
-    j["size"] = w.size;
+    if (w.size.has_value()) {
+        j["size"] = *w.size;
+    }
 
     if (w.resolution.has_value()) {
         j["res"] = *w.resolution;
@@ -1831,10 +1839,10 @@ static void to_json(nlohmann::json& j, const Window& w) {
         j["scalablemesh"] = w.scalable->mesh;
 
         if (w.scalable->orthographicQuality.has_value()) {
-            j["scalable_ortho_quality"] = *w.scalable->orthographicQuality;
+            j["scalablemesh_ortho_quality"] = *w.scalable->orthographicQuality;
         }
         if (w.scalable->orthographicResolution.has_value()) {
-            j["scalable_ortho_resolution"] = *w.scalable->orthographicResolution;
+            j["scalablemesh_ortho_res"] = *w.scalable->orthographicResolution;
         }
     }
 
@@ -2020,8 +2028,16 @@ config::Cluster readConfig(const std::filesystem::path& filename) {
         throw Err(6081, std::format("Could not find configuration file: {}", name));
     }
 
-    // First save the old current working directory, set the new one
-    const std::filesystem::path oldPwd = std::filesystem::current_path();
+    // Change the current working directory to the config folder while parsing so that
+    // relative paths resolve against it; restore the old one on every exit path
+    struct CwdGuard {
+        std::filesystem::path old = std::filesystem::current_path();
+        ~CwdGuard() {
+            std::error_code ec;
+            std::filesystem::current_path(old, ec);
+        }
+    };
+    const CwdGuard cwdGuard;
     const std::filesystem::path configFolder = std::filesystem::path(name).parent_path();
     if (!configFolder.empty()) {
         std::filesystem::current_path(configFolder);
@@ -2034,14 +2050,9 @@ config::Cluster readConfig(const std::filesystem::path& filename) {
             std::istreambuf_iterator<char>(f),
             std::istreambuf_iterator<char>()
         );
-        const config::Cluster cluster = readJsonConfig(contents);
-        // And reset the current working directory to the old value
-        std::filesystem::current_path(oldPwd);
-        return cluster;
+        return readJsonConfig(contents);
     }
     catch (const nlohmann::json::exception& e) {
-        // And reset the current working directory to the old value
-        std::filesystem::current_path(oldPwd);
         throw Err(6082, e.what());
     }
 }

@@ -81,7 +81,7 @@ void OffScreenBuffer::createFBO(int width, int height, int samples) {
     if (_isMultiSampled) {
         GLint maxSamples = 0;
         glGetIntegerv(GL_MAX_SAMPLES, &maxSamples);
-        samples = std::max(samples, maxSamples);
+        samples = std::min(samples, maxSamples);
         if (maxSamples < 2) {
             samples = 0;
         }
@@ -212,12 +212,20 @@ void OffScreenBuffer::resizeFBO(int width, int height, int samples) {
     _size = ivec2{ width, height };
     _isMultiSampled = samples > 1;
 
+    // Zero the handles after deletion: createFBO only recreates the ones the current
+    // settings need, and stale names could otherwise be deleted twice in the destructor
     glDeleteFramebuffers(1, &_frameBuffer);
+    _frameBuffer = 0;
     glDeleteRenderbuffers(1, &_depthBuffer);
+    _depthBuffer = 0;
     glDeleteFramebuffers(1, &_multiSampledFrameBuffer);
+    _multiSampledFrameBuffer = 0;
     glDeleteRenderbuffers(1, &_colorBuffer);
+    _colorBuffer = 0;
     glDeleteRenderbuffers(1, &_normalBuffer);
+    _normalBuffer = 0;
     glDeleteRenderbuffers(1, &_positionBuffer);
+    _positionBuffer = 0;
     createFBO(width, height, samples);
 }
 

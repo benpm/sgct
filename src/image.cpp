@@ -18,6 +18,8 @@
 #include <chrono>
 #include <csetjmp>
 #include <cstdio>
+#include <cstdlib>
+#include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
@@ -103,6 +105,9 @@ void Image::load(const std::filesystem::path& filename) {
 void Image::load(unsigned char* data, int length) {
     stbi_set_flip_vertically_on_load(1);
     _data = stbi_load_from_memory(data, length, &_size.x, &_size.y, &_nChannels, 0);
+    if (_data == nullptr) {
+        throw Err(9001, "Could not load image from memory buffer");
+    }
     _bytesPerChannel = 1;
     _dataSize = _size.x * _size.y * _nChannels * _bytesPerChannel;
 
@@ -136,6 +141,7 @@ void Image::save(const std::filesystem::path& filename) {
     if (fp == nullptr) {
         throw Err(9008, std::format("Cannot create PNG file '{}'", f));
     }
+    const std::unique_ptr<FILE, int(*)(FILE*)> fpGuard(fp, &fclose);
 
     // Initialize stuff
     png_structp png = png_create_write_struct(
@@ -163,6 +169,7 @@ void Image::save(const std::filesystem::path& filename) {
 
     png_infop info = png_create_info_struct(png);
     if (!info) {
+        png_destroy_write_struct(&png, nullptr);
         throw Err(9010, "Failed to create PNG info struct");
     }
 
@@ -216,7 +223,6 @@ void Image::save(const std::filesystem::path& filename) {
 
     png_write_end(png, nullptr);
     png_destroy_write_struct(&png, &info);
-    fclose(fp);
 
     const double t = (time() - t0) * 1000.0;
     Log::Debug(std::format("'{}' was saved successfully ({:.2f} ms)", filename, t));
@@ -269,14 +275,18 @@ void Image::allocateOrResizeData() {
     }
 
     if (_data && _dataSize != dataSize) {
-        // Reallocate if needed
-        delete[] _data;
+        // Reallocate if needed. _data may come from stb (malloc) or from the branch
+        // below, so both allocation paths must match ~Image's stbi_image_free
+        stbi_image_free(_data);
         _data = nullptr;
         _dataSize = 0;
     }
 
     if (!_data) {
-        _data = new unsigned char[dataSize];
+        _data = static_cast<unsigned char*>(std::malloc(dataSize));
+        if (_data == nullptr) {
+            throw Err(9013, std::format("Failed to allocate {} bytes", dataSize));
+        }
         _dataSize = dataSize;
 
         Log::Debug(std::format(

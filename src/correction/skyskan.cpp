@@ -57,35 +57,35 @@ Buffer generateSkySkanMesh(const std::filesystem::path& path, BaseViewport& pare
     while (std::getline(meshFile, line)) {
         if (auto r = scn::scan<float>(line, "Dome Azimuth={}");  r) {
             azimuth = r->value();
-            break;
+            continue;
         }
         if (auto r = scn::scan<float>(line, "Dome Elevation={}");  r) {
             elevation = r->value();
-            break;
+            continue;
         }
         if (auto r = scn::scan<float>(line, "Horizontal FOV={}");  r) {
             hFov = r->value();
-            break;
+            continue;
         }
         if (auto r = scn::scan<float>(line, "Vertical FOV={}");  r) {
             vFov = r->value();
-            break;
+            continue;
         }
         if (auto r = scn::scan<float>(line, "Horizontal Tweak={}");  r) {
             fovTweaks.x = r->value();
-            break;
+            continue;
         }
         if (auto r = scn::scan<float>(line, "Vertical Tweak={}");  r) {
             fovTweaks.y = r->value();
-            break;
+            continue;
         }
         if (auto r = scn::scan<float>(line, "U Tweak={}");  r) {
             uvTweaks.x = r->value();
-            break;
+            continue;
         }
         if (auto r = scn::scan<float>(line, "V Tweak={}");  r) {
             uvTweaks.y = r->value();
-            break;
+            continue;
         }
         if (auto r = scn::scan<unsigned int, unsigned int>(line, "{} {}");
             r && !areDimsSet)
@@ -93,10 +93,10 @@ Buffer generateSkySkanMesh(const std::filesystem::path& path, BaseViewport& pare
             areDimsSet = true;
             std::tie(sizeX, sizeY) = r->values();
             buf.vertices.resize(static_cast<size_t>(sizeX) * static_cast<size_t>(sizeY));
-            break;
+            continue;
         }
         if (auto r = scn::scan<float, float, float, float>(line, "{} {} {} {}");
-            r && areDimsSet)
+            r && areDimsSet && counter < buf.vertices.size())
         {
             auto& [x, y, u, v] = r->values();
             if (uvTweaks.x > -1.f) {
@@ -117,7 +117,6 @@ Buffer generateSkySkanMesh(const std::filesystem::path& path, BaseViewport& pare
             buf.vertices[counter].b = 1.f;
             buf.vertices[counter].a = 1.f;
             counter++;
-            break;
         }
     }
 

@@ -34,6 +34,11 @@ struct SGCT_EXPORT Configuration {
     std::optional<bool> omitWindowNameInScreenshot;
     std::optional<bool> useOpenGLDebugContext;
 
+    /// Take a screenshot of every window on this frame (1-based)
+    std::optional<unsigned int> captureFrame;
+    /// Terminate the render loop once this many frames have been rendered
+    std::optional<unsigned int> exitAfterFrame;
+
     std::optional<bool> printWaitMessage;
     std::optional<float> waitTimeout;
 };

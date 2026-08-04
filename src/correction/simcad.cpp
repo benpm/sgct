@@ -85,8 +85,9 @@ Buffer generateSimCADMesh(const std::filesystem::path& path, const vec2& pos,
 
         if (childVal == "X-FlatParameters") {
             float xrange = 1.f;
-            if (child->QueryFloatAttribute("range", &xrange) == XML_SUCCESS) {
-                const std::string xcoordstr(child->GetText());
+            const char* text = child->GetText();
+            if (text && child->QueryFloatAttribute("range", &xrange) == XML_SUCCESS) {
+                const std::string xcoordstr(text);
                 const std::vector<std::string> xcoords = split(xcoordstr, ' ');
                 for (const std::string& x : xcoords) {
                     xcorrections.push_back(std::stof(x) / xrange);
@@ -95,8 +96,9 @@ Buffer generateSimCADMesh(const std::filesystem::path& path, const vec2& pos,
         }
         else if (childVal == "Y-FlatParameters") {
             float yrange = 1.f;
-            if (child->QueryFloatAttribute("range", &yrange) == XML_SUCCESS) {
-                const std::string ycoordstr(child->GetText());
+            const char* text = child->GetText();
+            if (text && child->QueryFloatAttribute("range", &yrange) == XML_SUCCESS) {
+                const std::string ycoordstr(text);
                 const std::vector<std::string> ycoords = split(ycoordstr, ' ');
                 for (const std::string& y : ycoords) {
                     ycorrections.push_back(std::stof(y) / yrange);
@@ -120,6 +122,9 @@ Buffer generateSimCADMesh(const std::filesystem::path& path, const vec2& pos,
 
     const size_t nCols = static_cast<unsigned int>(nColumnsf);
     const size_t nRows = static_cast<unsigned int>(nRowsf);
+    if (nCols < 2 || nRows < 2) {
+        throw Err(2084, "Too few correction values read from SimCAD file");
+    }
 
     // Init to max intensity (opaque white)
     Buffer::Vertex vertex;

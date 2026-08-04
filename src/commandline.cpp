@@ -70,11 +70,11 @@ Configuration parseArguments(std::vector<std::string>& arg) {
             config.nCaptureThreads = std::max(std::stoi(arg[i + 1]), 1);
             arg.erase(arg.begin() + i, arg.begin() + i + 2);
         }
-        else if (arg[i] == "--screenshot-path") {
+        else if (arg[i] == "--screenshot-path" && arg.size() > (i + 1)) {
             config.screenshotPath = arg[i + 1];
             arg.erase(arg.begin() + i, arg.begin() + i + 2);
         }
-        else if (arg[i] == "--screenshot-prefix") {
+        else if (arg[i] == "--screenshot-prefix" && arg.size() > (i + 1)) {
             config.screenshotPrefix = arg[i + 1];
             arg.erase(arg.begin() + i, arg.begin() + i + 2);
         }
@@ -86,13 +86,25 @@ Configuration parseArguments(std::vector<std::string>& arg) {
             config.omitWindowNameInScreenshot = true;
             arg.erase(arg.begin() + i);
         }
+        else if (arg[i] == "--capture-frame" && arg.size() > (i + 1)) {
+            config.captureFrame = static_cast<unsigned int>(
+                std::max(std::stoi(arg[i + 1]), 1)
+            );
+            arg.erase(arg.begin() + i, arg.begin() + i + 2);
+        }
+        else if (arg[i] == "--exit-after-frame" && arg.size() > (i + 1)) {
+            config.exitAfterFrame = static_cast<unsigned int>(
+                std::max(std::stoi(arg[i + 1]), 1)
+            );
+            arg.erase(arg.begin() + i, arg.begin() + i + 2);
+        }
         else if (arg[i] == "--print-wait-message") {
             config.printWaitMessage = true;
             arg.erase(arg.begin() + i);
         }
-        else if (arg[i] == "--wait-timeout") {
+        else if (arg[i] == "--wait-timeout" && arg.size() > (i + 1)) {
             config.waitTimeout = std::stof(arg[i + 1]);
-            arg.erase(arg.begin() + 1, arg.begin() + i + 2);
+            arg.erase(arg.begin() + i, arg.begin() + i + 2);
         }
         else {
             // Ignore unknown commands
@@ -140,6 +152,11 @@ Parameters:
     If set, screenshots will not contain the name of the window if multiple windows exist
 --number-capture-threads <integer>
     Set the maximum amount of thread that should be used during framecapture
+--capture-frame <integer>
+    Take a screenshot of all windows on the given frame (1-based). Useful for
+    automated validation that an application renders correctly
+--exit-after-frame <integer>
+    Terminate the application after the given number of frames have been rendered
 )";
 }
 

@@ -77,11 +77,22 @@ Buffer generateDomeProjectionMesh(const std::filesystem::path& path, const vec2&
         }
     }
 
+    // Add one to actually store the dimensions instead of the largest index
     nCols++;
     nRows++;
 
-    for (unsigned int c = 0; c < nCols; c++) {
-        for (unsigned int r = 0; r < nRows; r++) {
+    if (buf.vertices.size() != static_cast<size_t>(nCols) * nRows) {
+        throw Error(
+            Error::Component::DomeProjection, 2011,
+            std::format(
+                "Vertex count {} does not match grid {}x{} in '{}'",
+                buf.vertices.size(), nCols, nRows, path
+            )
+        );
+    }
+
+    for (unsigned int c = 0; c < nCols - 1; c++) {
+        for (unsigned int r = 0; r < nRows - 1; r++) {
             // 3      2
             //  x____x
             //  |   /|
@@ -91,11 +102,10 @@ Buffer generateDomeProjectionMesh(const std::filesystem::path& path, const vec2&
             //  x----x
             // 0      1
 
-            // Add one to actually store the dimensions instead of the largest index
-            const unsigned int i0 = r * (nCols + 1)+ c;
-            const unsigned int i1 = r * (nCols + 1) + (c + 1);
-            const unsigned int i2 = (r + 1) * (nCols + 1) + (c + 1);
-            const unsigned int i3 = (r + 1) * (nCols + 1) + c;
+            const unsigned int i0 = r * nCols + c;
+            const unsigned int i1 = r * nCols + (c + 1);
+            const unsigned int i2 = (r + 1) * nCols + (c + 1);
+            const unsigned int i3 = (r + 1) * nCols + c;
 
             buf.indices.push_back(i0);
             buf.indices.push_back(i1);

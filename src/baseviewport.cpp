@@ -159,9 +159,9 @@ void BaseViewport::calculateNonLinearFrustum(FrustumMode mode, float nearClip,
         case FrustumMode::StereoRight:
         {
             const vec3 o = vec3 {
-                _user->posRightEye().x + pos.x,
-                _user->posRightEye().y + pos.y,
-                _user->posRightEye().z + pos.z
+                _user->posRightEye().x - pos.x,
+                _user->posRightEye().y - pos.y,
+                _user->posRightEye().z - pos.z
             };
 
             _stereoRightProj.calculateProjection(pos, _projPlane, nearClip, farClip, o);

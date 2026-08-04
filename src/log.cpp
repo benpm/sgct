@@ -55,12 +55,13 @@ Log::Log() {
 
 void Log::printv(Level level, std::string message) {
     if (_showTime) {
-        constexpr int TimeBufferSize = 9;
-        std::array<char, TimeBufferSize> timeBuffer;
+        constexpr int TimeBufferSize = 16;
+        std::array<char, TimeBufferSize> timeBuffer = {};
         const time_t now = ::time(nullptr);
-        tm* timeInfoPtr = nullptr;
-        timeInfoPtr = localtime(&now);
-        strftime(timeBuffer.data(), TimeBufferSize, "%X", timeInfoPtr);
+        const tm* timeInfoPtr = localtime(&now);
+        if (timeInfoPtr) {
+            strftime(timeBuffer.data(), TimeBufferSize, "%X", timeInfoPtr);
+        }
 
         message = std::format("{} | {}", timeBuffer.data(), message);
     }

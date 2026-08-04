@@ -54,6 +54,12 @@ Buffer generatePerEyeMeshFromPFMImage(const std::filesystem::path& path, const v
         );
     }
     auto [nCols, nRows] = result->values();
+    if (nCols == 0 || nRows == 0 || nCols > 8192 || nRows > 8192) {
+        throw Error(
+            Error::Component::Pfm, 2052,
+            std::format("Invalid dimensions {}x{} in file '{}'", nCols, nRows, path)
+        );
+    }
     auto result2 = scn::scan<float>(endiannessIndicator, "{}");
     if (!result2) {
         throw Error(
@@ -68,13 +74,13 @@ Buffer generatePerEyeMeshFromPFMImage(const std::filesystem::path& path, const v
         );
     }
 
-    const int numCorrectionValues = nCols * nRows;
+    const size_t numCorrectionValues = static_cast<size_t>(nCols) * nRows;
     std::vector<float> xcorrections;
     xcorrections.resize(numCorrectionValues);
     std::vector<float> ycorrections;
     ycorrections.resize(numCorrectionValues);
 
-    for (int i = 0; i < numCorrectionValues; i++) {
+    for (size_t i = 0; i < numCorrectionValues; i++) {
         meshFile.read(reinterpret_cast<char*>(xcorrections.data() + i), sizeof(float));
         meshFile.read(reinterpret_cast<char*>(ycorrections.data() + i), sizeof(float));
         float dumpValue = 0.f;
@@ -90,6 +96,12 @@ Buffer generatePerEyeMeshFromPFMImage(const std::filesystem::path& path, const v
 
     const unsigned int nEyes = textureRenderMode ? 1 : 2;
     nCols /= nEyes;
+    if (nCols < 2 || nRows < 2) {
+        throw Error(
+            Error::Component::Pfm, 2052,
+            std::format("Too few correction values in file '{}'", path)
+        );
+    }
 
     // Images are stored with X 0-1 (left to right), but Y 1 to 0 (top-bottom)
 
