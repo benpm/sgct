@@ -1619,9 +1619,6 @@ void Window::renderViewports(FrustumMode frustum, Eye eye) const {
     ZoneScoped;
 
     _finalFBO->bind();
-    if (_finalFBO->isMultiSampled()) {
-        return;
-    }
 
     // Ping-pong between the intermediate and eye textures so post-processing passes can
     // avoid extra texture copies. The intermediate texture only exists when FXAA or a
@@ -1633,22 +1630,36 @@ void Window::renderViewports(FrustumMode frustum, Eye eye) const {
         frameBufferTextureEye(eye)
     };
     int curOutIdx = 0;
+    // All post-scene passes render to GL_COLOR_ATTACHMENT0 of the regular FBO
+    const GLenum postFxBuffer = GL_COLOR_ATTACHMENT0;
 
-    _finalFBO->attachColorTexture(texColorOut[curOutIdx], GL_COLOR_ATTACHMENT0);
-
-    if (Engine::instance().settings().useDepthTexture) {
-        _finalFBO->attachDepthTexture(_frameBufferTextures.depth);
+    if (_finalFBO->isMultiSampled()) {
+        // A multisampled FBO renders the scene into its multisample renderbuffers
+        // (attached at creation); they are resolved into the eye texture by the blit in
+        // the PostFX section below, so the ping-pong starts on the eye texture. Textures
+        // can only be attached to the regular FBO
+        curOutIdx = 1;
     }
+    else {
+        _finalFBO->attachColorTexture(texColorOut[curOutIdx], GL_COLOR_ATTACHMENT0);
 
-    if (Engine::instance().settings().useNormalTexture) {
-        _finalFBO->attachColorTexture(_frameBufferTextures.normals, GL_COLOR_ATTACHMENT1);
-    }
+        if (Engine::instance().settings().useDepthTexture) {
+            _finalFBO->attachDepthTexture(_frameBufferTextures.depth);
+        }
 
-    if (Engine::instance().settings().usePositionTexture) {
-        _finalFBO->attachColorTexture(
-            _frameBufferTextures.positions,
-            GL_COLOR_ATTACHMENT2
-        );
+        if (Engine::instance().settings().useNormalTexture) {
+            _finalFBO->attachColorTexture(
+                _frameBufferTextures.normals,
+                GL_COLOR_ATTACHMENT1
+            );
+        }
+
+        if (Engine::instance().settings().usePositionTexture) {
+            _finalFBO->attachColorTexture(
+                _frameBufferTextures.positions,
+                GL_COLOR_ATTACHMENT2
+            );
+        }
     }
 
     const Window::StereoMode sm = stereoMode();
@@ -1784,6 +1795,10 @@ void Window::renderViewports(FrustumMode frustum, Eye eye) const {
                 );
             }
             _finalFBO->blit();
+
+            // The resolved image now lives in the eye texture (texColorOut[1]); run
+            // the remaining passes on the regular FBO, not the multisampled one
+            _finalFBO->bind(false, 1, &postFxBuffer);
         }
 
 
@@ -1795,7 +1810,7 @@ void Window::renderViewports(FrustumMode frustum, Eye eye) const {
 
             // Output to the other texture, using current texture as input
             curOutIdx = 1 - curOutIdx;
-            _finalFBO->bind();
+            _finalFBO->bind(false, 1, &postFxBuffer);
             _finalFBO->attachColorTexture(texColorOut[curOutIdx], GL_COLOR_ATTACHMENT0);
             glReadBuffer(GL_COLOR_ATTACHMENT0);
             glDrawBuffer(GL_COLOR_ATTACHMENT0);
@@ -1813,7 +1828,7 @@ void Window::renderViewports(FrustumMode frustum, Eye eye) const {
 
             // Copy the current eye render target into the intermediate texture for FXAA
             curOutIdx = 1 - curOutIdx;
-            _finalFBO->bind();
+            _finalFBO->bind(false, 1, &postFxBuffer);
             _finalFBO->attachColorTexture(texColorOut[curOutIdx], GL_COLOR_ATTACHMENT0);
             glReadBuffer(GL_COLOR_ATTACHMENT0);
             glDrawBuffer(GL_COLOR_ATTACHMENT0);
@@ -1845,7 +1860,7 @@ void Window::renderViewports(FrustumMode frustum, Eye eye) const {
             // The FBO still has the intermediate texture (holding the final image)
             // attached; copy it into the eye texture, then re-attach the eye texture so
             // subsequent 2D rendering composites on top of it
-            _finalFBO->bind();
+            _finalFBO->bind(false, 1, &postFxBuffer);
             glReadBuffer(GL_COLOR_ATTACHMENT0);
 
             const ivec2 framebufferSize = framebufferResolution();

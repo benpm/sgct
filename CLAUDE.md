@@ -27,10 +27,13 @@ cmake --build --preset debug
 ```
 
 The `debug` preset:
-- Configures for Visual Studio 2026 generator on Windows (adapts to native build system on Linux/macOS)
+- Uses Ninja with clang-cl + lld (configure/build from inside vcvars64 on Windows)
 - Enables examples (`SGCT_EXAMPLES=ON`)
 - Uses static linking (`BUILD_SHARED_LIBS=OFF`)
-- Places executables in `bin/Debug/`
+- Places executables in `build/debug/bin/`
+
+**Do not run binaries from the repo-root `bin/` directory** — that is stale output from
+an older Visual Studio build and does not reflect current sources. If it exists, delete it.
 
 ## Architecture
 
@@ -129,17 +132,17 @@ sgct/
 
 ### Running Examples
 
-After building with `SGCT_EXAMPLES=ON`, executables are in `bin/Debug`:
+After building with `SGCT_EXAMPLES=ON`, executables are in `build/debug/bin`:
 
 ```bash
 # Run with default single-window config
-./bin/Debug/simplecube
+./build/debug/bin/simplecube
 
 # Run with specific configuration
-./bin/Debug/simplecube --config config/single.json
+./build/debug/bin/simplecube --config config/single.json
 
 # Run with fisheye projection
-./bin/Debug/simplecube --config config/single_fisheye.json
+./build/debug/bin/simplecube --config config/single_fisheye.json
 ```
 
 ### Understanding apps/simplecube (Main Testbed)
@@ -218,12 +221,12 @@ The grid of boxes provides excellent visual feedback for testing projections. Wh
 
 ```bash
 # Standard planar projection with bloom (requires config/single_bloom.json with HDR)
-./bin/Debug/simplecube --config config/single_bloom.json
+./build/debug/bin/simplecube --config config/single_bloom.json
 
 # Standard configs (no HDR by default)
-./bin/Debug/simplecube --config config/single.json
-./bin/Debug/simplecube --config config/single_fisheye.json
-./bin/Debug/simplecube --config config/single_cylindrical.json
+./build/debug/bin/simplecube --config config/single.json
+./build/debug/bin/simplecube --config config/single_fisheye.json
+./build/debug/bin/simplecube --config config/single_cylindrical.json
 ```
 
 **Why simplecube is the main testbed:**
@@ -240,12 +243,12 @@ The grid of boxes provides excellent visual feedback for testing projections. Wh
 
 ```bash
 # Standard planar projection with bloom (requires config/single_bloom.json with HDR)
-./bin/Debug/simplecube --config config/single_bloom.json
+./build/debug/bin/simplecube --config config/single_bloom.json
 
 # Standard configs (no HDR by default)
-./bin/Debug/simplecube --config config/single.json
-./bin/Debug/simplecube --config config/single_fisheye.json
-./bin/Debug/simplecube --config config/single_cylindrical.json
+./build/debug/bin/simplecube --config config/single.json
+./build/debug/bin/simplecube --config config/single_fisheye.json
+./build/debug/bin/simplecube --config config/single_cylindrical.json
 ```
 
 ### Creating a New Application
@@ -464,7 +467,7 @@ void postProcess(const Window& window, FrustumMode, unsigned int inputTexture, i
 **Usage**:
 ```bash
 # Run with bloom enabled (default)
-./bin/Debug/simplecube --config config/single_bloom.json
+./build/debug/bin/simplecube --config config/single_bloom.json
 
 # Keyboard controls:
 # H - Toggle ImGui control panel
@@ -502,8 +505,8 @@ The simplecube example includes an ImGui-based control panel for real-time bloom
 ### Multi-Node Testing
 
 To test cluster synchronization locally with `two_nodes.json`:
-1. Run first instance: `./bin/Debug/simplecube --config config/two_nodes.json --local 0`
-2. Run second instance: `./bin/Debug/simplecube --config config/two_nodes.json --local 1`
+1. Run first instance: `./build/debug/bin/simplecube --config config/two_nodes.json --local 0`
+2. Run second instance: `./build/debug/bin/simplecube --config config/two_nodes.json --local 1`
 3. Both windows should show synchronized animation
 
 ### Viewport and Projection Types
@@ -534,6 +537,10 @@ When modifying SGCT core:
 2. Run `simplecube` with various configs to test rendering pipeline
 3. Run tests with `ctest` from the build directory
 4. Test different projection types to ensure changes work universally
+5. Validate all examples render actual content:
+   `uv run support/validate_examples.py --build-dir build/debug`
+   (uses `--capture-frame`/`--exit-after-frame` to screenshot each example and
+   checks the frames are not blank; produces a contact sheet for review)
 
 ### Performance Considerations
 
