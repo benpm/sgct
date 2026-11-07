@@ -10,15 +10,12 @@
 
 #include <sgct/config.h>
 #include <sgct/format.h>
+#include <sgct/glm.h>
 #include <sgct/log.h>
 #include <sgct/node.h>
 #include <sgct/profiling.h>
 #include <sgct/user.h>
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
 #include <algorithm>
-#include <cstring>
 #include <functional>
 #include <stdexcept>
 #include <utility>
@@ -73,25 +70,20 @@ ClusterManager::ClusterManager(const config::Cluster& cluster, int clusterID)
 
     if (cluster.scene) {
         const glm::mat4 translate = cluster.scene->offset ?
-            glm::translate(
-                glm::mat4(1.f), glm::make_vec3(&cluster.scene->offset->x)
-            ) : glm::mat4(1.f);
+            glm::translate(glm::mat4(1.f), *cluster.scene->offset) : glm::mat4(1.f);
 
         const glm::mat4 rotation = cluster.scene->orientation ?
-            glm::mat4_cast(glm::make_quat(&cluster.scene->orientation->x)) :
+            glm::mat4_cast(*cluster.scene->orientation) :
             glm::mat4(1.f);
 
         const glm::mat4 scale = cluster.scene->scale ?
             glm::scale(glm::mat4(1.f), glm::vec3(*cluster.scene->scale)) : glm::mat4(1.f);
 
-        glm::mat4 complete = rotation * translate * scale;
-        std::memcpy(
-            _sceneTransform.values.data(),
-            glm::value_ptr(complete),
-            sizeof(sgct::mat4)
-        );
+        _sceneTransform = rotation * translate * scale;
     }
 }
+
+ClusterManager::~ClusterManager() = default;
 
 const Node& ClusterManager::node(int index) const {
     return *_nodes[index];
@@ -145,7 +137,7 @@ int ClusterManager::numberOfNodes() const {
     return static_cast<int>(_nodes.size());
 }
 
-const mat4& ClusterManager::sceneTransform() const {
+const glm::mat4& ClusterManager::sceneTransform() const {
     return _sceneTransform;
 }
 

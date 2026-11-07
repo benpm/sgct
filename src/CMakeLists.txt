@@ -12,16 +12,16 @@ include(GenerateExportHeader)
 add_library(sgct)
 add_library(sgct::sgct ALIAS sgct)
 set_compile_options(sgct)
-generate_export_header(sgct
-  EXPORT_FILE_NAME include/sgct/sgctexports.h
-)
+target_compile_features(sgct PUBLIC cxx_std_23)
+generate_export_header(sgct EXPORT_FILE_NAME include/sgct/sgctexports.h)
 
 configure_file(
   ${PROJECT_SOURCE_DIR}/src/version.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/include/sgct/version.h @ONLY
 )
 
-target_include_directories(sgct
+target_include_directories(
+  sgct
   PUBLIC $<INSTALL_INTERFACE:include>
 )
 
@@ -50,12 +50,12 @@ target_sources(
     ${PROJECT_SOURCE_DIR}/include/sgct/font.h
     ${PROJECT_SOURCE_DIR}/include/sgct/fontmanager.h
     ${PROJECT_SOURCE_DIR}/include/sgct/freetype.h
+    ${PROJECT_SOURCE_DIR}/include/sgct/glm.h
     ${PROJECT_SOURCE_DIR}/include/sgct/image.h
     ${PROJECT_SOURCE_DIR}/include/sgct/internalshaders.h
     ${PROJECT_SOURCE_DIR}/include/sgct/joystick.h
     ${PROJECT_SOURCE_DIR}/include/sgct/keys.h
     ${PROJECT_SOURCE_DIR}/include/sgct/log.h
-    ${PROJECT_SOURCE_DIR}/include/sgct/math.h
     ${PROJECT_SOURCE_DIR}/include/sgct/modifiers.h
     ${PROJECT_SOURCE_DIR}/include/sgct/mouse.h
     ${PROJECT_SOURCE_DIR}/include/sgct/mutexes.h
@@ -74,8 +74,6 @@ target_sources(
     ${PROJECT_SOURCE_DIR}/include/sgct/statisticsrenderer.h
     ${PROJECT_SOURCE_DIR}/include/sgct/texturemanager.h
     ${PROJECT_SOURCE_DIR}/include/sgct/tinyxml.h
-    ${PROJECT_SOURCE_DIR}/include/sgct/tracker.h
-    ${PROJECT_SOURCE_DIR}/include/sgct/trackingdevice.h
     ${PROJECT_SOURCE_DIR}/include/sgct/user.h
     ${PROJECT_SOURCE_DIR}/include/sgct/viewport.h
     ${PROJECT_SOURCE_DIR}/include/sgct/window.h
@@ -88,6 +86,7 @@ target_sources(
     ${PROJECT_SOURCE_DIR}/include/sgct/correction/sciss.h
     ${PROJECT_SOURCE_DIR}/include/sgct/correction/simcad.h
     ${PROJECT_SOURCE_DIR}/include/sgct/correction/skyskan.h
+    ${PROJECT_SOURCE_DIR}/include/sgct/openxr.h
     ${PROJECT_SOURCE_DIR}/include/sgct/projection/cubemap.h
     ${PROJECT_SOURCE_DIR}/include/sgct/projection/cylindrical.h
     ${PROJECT_SOURCE_DIR}/include/sgct/projection/equirectangular.h
@@ -95,9 +94,6 @@ target_sources(
     ${PROJECT_SOURCE_DIR}/include/sgct/projection/nonlinearprojection.h
     ${PROJECT_SOURCE_DIR}/include/sgct/projection/projectionplane.h
     ${PROJECT_SOURCE_DIR}/include/sgct/projection/sphericalmirror.h
-
-    $<$<BOOL:${SGCT_OPENVR_SUPPORT}>:${PROJECT_SOURCE_DIR}/include/sgct/openvr.h>
-    $<$<BOOL:${SGCT_VRPN_SUPPORT}>:${PROJECT_SOURCE_DIR}/include/sgct/trackingmanager.h>
 
   PRIVATE
     baseviewport.cpp
@@ -112,11 +108,11 @@ target_sources(
     freetype.cpp
     image.cpp
     log.cpp
-    math.cpp
     network.cpp
     networkmanager.cpp
     node.cpp
     offscreenbuffer.cpp
+    openxr.cpp
     profiling.cpp
     projection.cpp
     screencapture.cpp
@@ -125,8 +121,6 @@ target_sources(
     shareddata.cpp
     statisticsrenderer.cpp
     texturemanager.cpp
-    tracker.cpp
-    trackingdevice.cpp
     user.cpp
     viewport.cpp
     window.cpp
@@ -145,17 +139,14 @@ target_sources(
     projection/nonlinearprojection.cpp
     projection/projectionplane.cpp
     projection/sphericalmirror.cpp
-
-    $<$<BOOL:${SGCT_OPENVR_SUPPORT}>:openvr.cpp>
-    $<$<BOOL:${SGCT_VRPN_SUPPORT}>:trackingmanager.cpp>
 )
 
 target_precompile_headers(sgct PRIVATE
   <sgct/config.h>
   <sgct/engine.h>
   <sgct/format.h>
+  <sgct/glm.h>
   <sgct/opengl.h>
-  <glm/glm.hpp>
 
   <scn/scan.h>
 
@@ -173,68 +164,69 @@ target_precompile_headers(sgct PRIVATE
   <vector>
 )
 
-target_include_directories(sgct PRIVATE "../../ext/json-schema-validator/src")
-
-find_package(glad REQUIRED)
-find_package(glfw3 REQUIRED)
-find_package(glm REQUIRED)
-find_package(minizip REQUIRED)
+find_package(Freetype REQUIRED)
+find_package(glad CONFIG REQUIRED)
+find_package(glfw3 CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
+find_package(minizip CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
+find_package(nlohmann_json_schema_validator CONFIG REQUIRED)
 find_package(OpenGL REQUIRED)
+find_package(OpenXR CONFIG REQUIRED)
 find_package(PNG REQUIRED)
-find_package(scn REQUIRED)
-find_package(Stb REQUIRED)
-find_package(tinyxml2 REQUIRED)
+find_package(scn CONFIG REQUIRED)
+find_package(stbimage CONFIG REQUIRED)
+find_package(tinyxml2 CONFIG REQUIRED)
 find_package(ZLIB REQUIRED)
+
+if (WIN32)
+  if (SGCT_SPOUT_SUPPORT)
+    find_package(Spout2 CONFIG REQUIRED)
+  endif ()
+
+  find_package(Vulkan REQUIRED)
+endif ()
 
 if (SGCT_TRACY_SUPPORT)
   find_package(Threads REQUIRED) # Needed by Tracy
-  find_package(Tracy REQUIRED)
-endif ()
-if (SGCT_FREETYPE_SUPPORT)
-  find_package(Freetype REQUIRED)
-endif ()
-if (SGCT_OPENVR_SUPPORT)
-  find_package(openvr REQUIRED)
-endif ()
-if (SGCT_VRPN_SUPPORT)
-  find_package(vrpn REQUIRED)
+  find_package(Tracy CONFIG REQUIRED)
 endif ()
 
 target_link_libraries(sgct
   PUBLIC
+    Freetype::Freetype
     glad::glad
     glfw
+    glm::glm
     OpenGL::GL
-    $<$<BOOL:${SGCT_FREETYPE_SUPPORT}>:freetype>
-    $<$<BOOL:${SGCT_OPENVR_SUPPORT}>:openvr>
-    $<$<BOOL:${SGCT_SPOUT_SUPPORT}>:spout>
+    OpenXR::openxr_loader
+    $<$<BOOL:${SGCT_SPOUT_SUPPORT}>:Spout2::SpoutLibrary>
     $<$<BOOL:${SGCT_TRACY_SUPPORT}>:Tracy::TracyClient>
   PRIVATE
     ZLIB::ZLIB
-    minizip::minizip
-    glm::glm
+    $<IF:$<TARGET_EXISTS:MINIZIP::minizip>,MINIZIP::minizip,MINIZIP::minizipstatic>
     PNG::PNG
     scn::scn
-    sgct::stb
+    $<IF:$<BOOL:${BUILD_SHARED_LIBS}>,unofficial::stbimage::stbimage-read-impl,unofficial::stbimage::stbimage>
     tinyxml2::tinyxml2
     nlohmann_json::nlohmann_json
-    nlohmann_json_schema_validator::nlohmann_json_schema_validator
-    $<$<BOOL:${SGCT_DEP_INCLUDE_SCALABLE}>:scalable>
-    $<$<BOOL:${SGCT_VRPN_SUPPORT}>:vrpn>
+    nlohmann_json_schema_validator::validator
+    $<$<BOOL:${SGCT_SCALABLE_SUPPORT}>:scalable>
     $<$<BOOL:${SGCT_NDI_SUPPORT}>:ndi>
+    $<$<BOOL:${WIN32}>:Vulkan::Vulkan>
 )
 
 target_compile_definitions(sgct
   PUBLIC
-    $<$<BOOL:${SGCT_FREETYPE_SUPPORT}>:SGCT_HAS_TEXT>
-    $<$<BOOL:${SGCT_OPENVR_SUPPORT}>:SGCT_HAS_OPENVR>
+    SGCT_HAS_TEXT
+    SGCT_HAS_OPENXR
     $<$<BOOL:${SGCT_SPOUT_SUPPORT}>:SGCT_HAS_SPOUT>
     $<$<BOOL:${SGCT_MEMORY_PROFILING}>:SGCT_OVERRIDE_NEW_AND_DELETE>
   PRIVATE
-    $<$<BOOL:${SGCT_DEP_INCLUDE_SCALABLE}>:SGCT_HAS_SCALABLE>
-    $<$<BOOL:${SGCT_VRPN_SUPPORT}>:SGCT_HAS_VRPN>
+    $<$<BOOL:${SGCT_SCALABLE_SUPPORT}>:SGCT_HAS_SCALABLE>
     $<$<BOOL:${SGCT_NDI_SUPPORT}>:SGCT_HAS_NDI>
     $<$<BOOL:${WIN32}>:_CRT_SECURE_NO_WARNINGS>
+    $<$<BOOL:${WIN32}>:SGCT_HAS_OPENXR_VULKAN_FALLBACK>
 )
 
 if (WIN32)
@@ -248,8 +240,24 @@ else () # Linux
   )
 endif ()
 
-if (SGCT_INSTALL)
+if (PROJECT_IS_TOP_LEVEL)
   include(GNUInstallDirs)
+  include(CMakePackageConfigHelpers)
+
+  # The exported sgct target refers to these proprietary SDKs by target name, so their
+  # binaries have to ship along and sgctConfig.cmake has to recreate the imported targets
+  foreach (sdk IN ITEMS scalable ndi)
+    if (TARGET ${sdk})
+      string(TOUPPER ${sdk} sdk_var)
+      get_target_property(sdk_implib ${sdk} IMPORTED_IMPLIB)
+      get_target_property(sdk_library ${sdk} IMPORTED_LOCATION)
+      cmake_path(GET sdk_implib FILENAME SGCT_${sdk_var}_IMPLIB)
+      cmake_path(GET sdk_library FILENAME SGCT_${sdk_var}_LIBRARY)
+      install(FILES ${sdk_implib} DESTINATION ${CMAKE_INSTALL_LIBDIR})
+      install(FILES ${sdk_library} DESTINATION ${CMAKE_INSTALL_BINDIR})
+    endif ()
+  endforeach ()
+
   install(TARGETS sgct EXPORT sgctTargets
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -262,8 +270,21 @@ if (SGCT_INSTALL)
     NAMESPACE sgct::
     DESTINATION ${CMAKE_INSTALL_DATADIR}/sgct
   )
+  configure_package_config_file(
+    ${PROJECT_SOURCE_DIR}/support/cmake/sgctConfig.cmake.in
+    ${CMAKE_CURRENT_BINARY_DIR}/sgctConfig.cmake
+    INSTALL_DESTINATION ${CMAKE_INSTALL_DATADIR}/sgct
+    PATH_VARS CMAKE_INSTALL_LIBDIR CMAKE_INSTALL_BINDIR
+  )
+  write_basic_package_version_file(
+    ${CMAKE_CURRENT_BINARY_DIR}/sgctConfigVersion.cmake
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+  )
   install(
-      FILES ${PROJECT_SOURCE_DIR}/support/cmake/sgctConfig.cmake
-      DESTINATION ${CMAKE_INSTALL_DATADIR}/sgct
+    FILES
+      ${CMAKE_CURRENT_BINARY_DIR}/sgctConfig.cmake
+      ${CMAKE_CURRENT_BINARY_DIR}/sgctConfigVersion.cmake
+    DESTINATION ${CMAKE_INSTALL_DATADIR}/sgct
   )
 endif ()

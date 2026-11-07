@@ -10,7 +10,6 @@
 #include <catch2/matchers/catch_matchers_exception.hpp>
 
 #include <sgct/config.h>
-#include <sgct/math.h>
 #include "schema.h"
 
 using namespace sgct;
@@ -46,7 +45,7 @@ TEST_CASE("Load: Viewport/Minimal", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {}
                         }
                     }
@@ -91,7 +90,7 @@ TEST_CASE("Load: Viewport/Minimal", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = { Viewport() }
                         }
                     }
@@ -136,7 +135,7 @@ TEST_CASE("Load: Viewport/Minimal", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = { Viewport(), Viewport() }
                         }
                     }
@@ -181,7 +180,7 @@ TEST_CASE("Load: Viewport/Minimal", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = { Viewport(), Viewport(), Viewport() }
                         }
                     }
@@ -232,7 +231,7 @@ TEST_CASE("Load: Viewport/User", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .user = "abc"
@@ -285,7 +284,7 @@ TEST_CASE("Load: Viewport/User", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .user = "def"
@@ -340,7 +339,7 @@ TEST_CASE("Load: Viewport/OverlayTexture", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .overlayTexture = std::filesystem::absolute("abc")
@@ -393,7 +392,7 @@ TEST_CASE("Load: Viewport/OverlayTexture", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .overlayTexture = std::filesystem::absolute("def")
@@ -448,7 +447,7 @@ TEST_CASE("Load: Viewport/BlendMaskTexture", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .blendMaskTexture = std::filesystem::absolute("abc")
@@ -501,7 +500,7 @@ TEST_CASE("Load: Viewport/BlendMaskTexture", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .blendMaskTexture = std::filesystem::absolute("def")
@@ -556,7 +555,7 @@ TEST_CASE("Load: Viewport/BlackLevelMaskTexture", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .blackLevelMaskTexture =
@@ -610,7 +609,7 @@ TEST_CASE("Load: Viewport/BlackLevelMaskTexture", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .blackLevelMaskTexture =
@@ -666,7 +665,7 @@ TEST_CASE("Load: Viewport/CorrectionMeshTexture", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .correctionMeshTexture =
@@ -720,7 +719,7 @@ TEST_CASE("Load: Viewport/CorrectionMeshTexture", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .correctionMeshTexture =
@@ -776,7 +775,7 @@ TEST_CASE("Load: Viewport/IsTracked", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .isTracked = false
@@ -829,7 +828,7 @@ TEST_CASE("Load: Viewport/IsTracked", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .isTracked = true
@@ -884,7 +883,7 @@ TEST_CASE("Load: Viewport/Eye", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .eye = Viewport::Eye::Mono
@@ -937,7 +936,7 @@ TEST_CASE("Load: Viewport/Eye", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .eye = Viewport::Eye::StereoLeft
@@ -990,7 +989,7 @@ TEST_CASE("Load: Viewport/Eye", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .eye = Viewport::Eye::StereoRight
@@ -1045,10 +1044,10 @@ TEST_CASE("Load: Viewport/Position", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
-                                    .position = vec2{ 1.f, 2.f }
+                                    .position = glm::vec2(1.f, 2.f)
                                 }
                             }
                         }
@@ -1098,10 +1097,10 @@ TEST_CASE("Load: Viewport/Position", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
-                                    .position = vec2{ 3.f, 4.f }
+                                    .position = glm::vec2(3.f, 4.f)
                                 }
                             }
                         }
@@ -1153,10 +1152,10 @@ TEST_CASE("Load: Viewport/Size", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
-                                    .size = vec2{ 1.f, 2.f }
+                                    .size = glm::vec2(1.f, 2.f)
                                 }
                             }
                         }
@@ -1206,10 +1205,10 @@ TEST_CASE("Load: Viewport/Size", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
-                                    .size = vec2{ 3.f, 4.f }
+                                    .size = glm::vec2(3.f, 4.f)
                                 }
                             }
                         }
@@ -1268,11 +1267,11 @@ TEST_CASE("Load: Viewport/Full", "[parse]") {
                 .port = 1,
                 .windows = {
                     Window {
-                        .size = ivec2{ 640, 480 },
+                        .size = glm::ivec2(640, 480),
                         .viewports = {
                             Viewport {
-                                .position = vec2{ 1.f, 2.f },
-                                .size = vec2{ 3.f, 4.f },
+                                .position = glm::vec2(1.f, 2.f),
+                                .size = glm::vec2(3.f, 4.f),
                                 .overlayTexture = std::filesystem::absolute("ghi"),
                                 .blendMaskTexture = std::filesystem::absolute("jkl"),
                                 .blackLevelMaskTexture = std::filesystem::absolute("mno"),
@@ -1307,9 +1306,12 @@ TEST_CASE("Validate: Viewport/User/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "user": 123
-          }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "user": 123
+            }
+          ]
         }
       ]
     }
@@ -1331,9 +1333,12 @@ TEST_CASE("Validate: Viewport/OverlayTexture/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "overlayTexture": 123
-          }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "overlay": 123
+            }
+          ]
         }
       ]
     }
@@ -1355,9 +1360,12 @@ TEST_CASE("Validate: Viewport/BlendMaskTexture/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "blendMaskTexture": 123
-          }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "blendmask": 123
+            }
+          ]
         }
       ]
     }
@@ -1379,9 +1387,12 @@ TEST_CASE("Validate: Viewport/BlackLevelMaskTexture/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "blacklevelmask": 123
-          }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "blacklevelmask": 123
+            }
+          ]
         }
       ]
     }
@@ -1403,9 +1414,12 @@ TEST_CASE("Validate: Viewport/CorrectionMeshTexture/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "mesh": 123
-          }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "mesh": 123
+            }
+          ]
         }
       ]
     }
@@ -1427,9 +1441,12 @@ TEST_CASE("Validate: Viewport/IsTracked/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "tracked": 123
-          }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "tracked": 123
+            }
+          ]
         }
       ]
     }
@@ -1451,9 +1468,12 @@ TEST_CASE("Validate: Viewport/Eye/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "eye": 123
-          }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "eye": 123
+            }
+          ]
         }
       ]
     }
@@ -1475,9 +1495,12 @@ TEST_CASE("Validate: Viewport/Eye/Illegal Value", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "eye": "abc"
-          }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "eye": "abc"
+            }
+          ]
         }
       ]
     }
@@ -1499,9 +1522,12 @@ TEST_CASE("Validate: Viewport/Position/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "pos": 123
-          }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "pos": 123
+            }
+          ]
         }
       ]
     }
@@ -1523,9 +1549,12 @@ TEST_CASE("Validate: Viewport/Position/All/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "pos": {}
-          }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "pos": {}
+            }
+          ]
         }
       ]
     }
@@ -1547,11 +1576,14 @@ TEST_CASE("Validate: Viewport/Position/X/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "pos": {
-              "y": 2
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "pos": {
+                "y": 2
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -1573,12 +1605,15 @@ TEST_CASE("Validate: Viewport/Position/X/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "pos": {
-              "x": "abc",
-              "y": 2
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "pos": {
+                "x": "abc",
+                "y": 2
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -1600,11 +1635,14 @@ TEST_CASE("Validate: Viewport/Position/Y/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "pos": {
-              "x": 1
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "pos": {
+                "x": 1
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -1626,12 +1664,15 @@ TEST_CASE("Validate: Viewport/Position/Y/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "pos": {
-              "x": 1,
-              "y": "abc"
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "pos": {
+                "x": 1,
+                "y": "abc"
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -1653,9 +1694,12 @@ TEST_CASE("Validate: Viewport/Size/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "size": 123
-          }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "size": 123
+            }
+          ]
         }
       ]
     }
@@ -1677,9 +1721,12 @@ TEST_CASE("Validate: Viewport/Size/All/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "size": {}
-          }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "size": {}
+            }
+          ]
         }
       ]
     }
@@ -1701,11 +1748,14 @@ TEST_CASE("Validate: Viewport/Size/X/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "size": {
-              "y": 2
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "size": {
+                "y": 2
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -1727,12 +1777,15 @@ TEST_CASE("Validate: Viewport/Size/X/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "size": {
-              "x": "abc",
-              "y": 2
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "size": {
+                "x": "abc",
+                "y": 2
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -1754,11 +1807,14 @@ TEST_CASE("Validate: Viewport/Size/Y/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "size": {
-              "x": 1
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "size": {
+                "x": 1
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -1780,12 +1836,15 @@ TEST_CASE("Validate: Viewport/Size/Y/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "size": {
-              "x": 1,
-              "y": "abc"
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "size": {
+                "x": 1,
+                "y": "abc"
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -1807,9 +1866,12 @@ TEST_CASE("Validate: Viewport/Projection/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": 123
-          }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": 123
+            }
+          ]
         }
       ]
     }

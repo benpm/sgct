@@ -11,17 +11,18 @@
 #include <sgct/correction/buffer.h>
 #include <sgct/error.h>
 #include <sgct/format.h>
+#include <sgct/glm.h>
 #include <sgct/log.h>
 #include <sgct/opengl.h>
 #include <sgct/profiling.h>
-#include <glm/glm.hpp>
 #include <scn/scan.h>
 #include <fstream>
 
 namespace sgct::correction {
 
-Buffer generatePerEyeMeshFromPFMImage(const std::filesystem::path& path, const vec2& pos,
-                                      const vec2& size, bool textureRenderMode)
+Buffer generatePerEyeMeshFromPFMImage(const std::filesystem::path& path,
+                                      const glm::vec2& pos, const glm::vec2& size,
+                                      bool textureRenderMode)
 {
     ZoneScoped;
 
@@ -46,6 +47,13 @@ Buffer generatePerEyeMeshFromPFMImage(const std::filesystem::path& path, const v
     std::getline(meshFile, dims, '\n');
     std::getline(meshFile, endiannessIndicator, '\n');
 
+    if (!fileFormatHeader.starts_with("PF")) {
+        throw Error(
+            Error::Component::Pfm, 2053,
+            std::format("Incorrect file type in file '{}'", path)
+        );
+    }
+
     auto result = scn::scan<unsigned int, unsigned int>(dims, "{} {}");
     if (!result) {
         throw Error(
@@ -67,10 +75,13 @@ Buffer generatePerEyeMeshFromPFMImage(const std::filesystem::path& path, const v
             std::format("Invalid endianness value in file '{}'", path)
         );
     }
-    if (fileFormatHeader[0] != 'P' || fileFormatHeader[1] != 'F') {
+
+    const unsigned int nEyes = textureRenderMode ? 1 : 2;
+    // We need at least two columns per eye and two rows to create a mesh
+    if (nCols < 2 * nEyes || nRows < 2) {
         throw Error(
-            Error::Component::Pfm, 2053,
-            std::format("Incorrect file type in file '{}'", path)
+            Error::Component::Pfm, 2052,
+            std::format("Invalid mesh dimensions {}x{} in file '{}'", nCols, nRows, path)
         );
     }
 
@@ -94,7 +105,6 @@ Buffer generatePerEyeMeshFromPFMImage(const std::filesystem::path& path, const v
         }
     }
 
-    const unsigned int nEyes = textureRenderMode ? 1 : 2;
     nCols /= nEyes;
     if (nCols < 2 || nRows < 2) {
         throw Error(

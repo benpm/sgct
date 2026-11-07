@@ -11,7 +11,7 @@
 
 #include <sgct/sgctexports.h>
 
-#include <sgct/math.h>
+#include <sgct/glm.h>
 #include <cstdint>
 #include <filesystem>
 #include <optional>
@@ -32,8 +32,8 @@ struct SGCT_EXPORT User {
 
     std::optional<std::string> name;
     std::optional<float> eyeSeparation;
-    std::optional<vec3> position;
-    std::optional<mat4> transformation;
+    std::optional<glm::vec3> position;
+    std::optional<glm::mat4> transformation;
     std::optional<Tracking> tracking;
 
     bool operator==(const User&) const noexcept = default;
@@ -50,8 +50,11 @@ struct SGCT_EXPORT Capture {
         bool operator==(const ScreenShotRange&) const noexcept = default;
     };
 
+    enum class BitDepth { Depth8, Depth16 };
+
     std::optional<std::filesystem::path> path;
     std::optional<ScreenShotRange> range;
+    std::optional<BitDepth> bitDepth;
 
     bool operator==(const Capture&) const noexcept = default;
 };
@@ -60,8 +63,8 @@ SGCT_EXPORT void validateCapture(const Capture& capture);
 
 
 struct SGCT_EXPORT Scene {
-    std::optional<vec3> offset;
-    std::optional<quat> orientation;
+    std::optional<glm::vec3> offset;
+    std::optional<glm::quat> orientation;
     std::optional<float> scale;
 
     bool operator==(const Scene&) const noexcept = default;
@@ -117,17 +120,17 @@ struct SGCT_EXPORT Tracker {
         std::vector<Sensor> sensors;
         std::vector<Button> buttons;
         std::vector<Axis> axes;
-        std::optional<vec3> offset;
-        std::optional<mat4> transformation;
+        std::optional<glm::vec3> offset;
+        std::optional<glm::mat4> transformation;
 
         bool operator==(const Device&) const noexcept = default;
     };
 
     std::string name;
     std::vector<Device> devices;
-    std::optional<vec3> offset;
+    std::optional<glm::vec3> offset;
     std::optional<double> scale;
-    std::optional<mat4> transformation;
+    std::optional<glm::mat4> transformation;
 
     bool operator==(const Tracker&) const noexcept = default;
 };
@@ -172,7 +175,7 @@ struct SGCT_EXPORT CubemapProjection {
     std::optional<Spout> spout;
     std::optional<NDI> ndi;
     std::optional<Channels> channels;
-    std::optional<vec3> orientation;
+    std::optional<glm::vec3> orientation;
 
     bool operator==(const CubemapProjection&) const noexcept = default;
 };
@@ -194,6 +197,7 @@ SGCT_EXPORT void validateProjection(const CylindricalProjection& proj);
 
 struct SGCT_EXPORT EquirectangularProjection {
     std::optional<int> quality;
+    std::optional<glm::quat> orientation;
 
     bool operator==(const EquirectangularProjection&) const noexcept = default;
 };
@@ -216,12 +220,12 @@ struct SGCT_EXPORT FisheyeProjection {
     std::optional<float> fov;
     std::optional<int> quality;
     std::optional<Interpolation> interpolation;
-    std::optional<float> tilt;
+    std::optional<glm::quat> orientation;
     std::optional<float> diameter;
     std::optional<Crop> crop;
     std::optional<bool> keepAspectRatio;
-    std::optional<vec3> offset;
-    std::optional<vec4> background;
+    std::optional<glm::vec3> offset;
+    std::optional<glm::vec4> background;
 
     bool operator==(const FisheyeProjection&) const noexcept = default;
 };
@@ -240,8 +244,8 @@ struct SGCT_EXPORT PlanarProjection {
         bool operator==(const FOV&) const noexcept = default;
     };
     FOV fov;
-    std::optional<quat> orientation;
-    std::optional<vec3> offset;
+    std::optional<glm::quat> orientation;
+    std::optional<glm::vec3> offset;
 
     bool operator==(const PlanarProjection&) const noexcept = default;
 };
@@ -250,9 +254,9 @@ SGCT_EXPORT void validateProjection(const PlanarProjection& proj);
 
 
 struct SGCT_EXPORT ProjectionPlane {
-    vec3 lowerLeft = vec3{ 0.f, 0.f, 0.f };
-    vec3 upperLeft = vec3{ 0.f, 0.f, 0.f };
-    vec3 upperRight = vec3{ 0.f, 0.f, 0.f };
+    glm::vec3 lowerLeft = glm::vec3(0.f, 0.f, 0.f);
+    glm::vec3 upperLeft = glm::vec3(0.f, 0.f, 0.f);
+    glm::vec3 upperRight = glm::vec3(0.f, 0.f, 0.f);
 
     bool operator==(const ProjectionPlane&) const noexcept = default;
 };
@@ -262,16 +266,16 @@ SGCT_EXPORT void validateProjection(const ProjectionPlane& proj);
 
 struct SGCT_EXPORT SphericalMirrorProjection {
     struct Mesh {
-        std::string bottom;
-        std::string left;
-        std::string right;
-        std::string top;
+        std::filesystem::path bottom;
+        std::filesystem::path left;
+        std::filesystem::path right;
+        std::filesystem::path top;
 
         bool operator==(const Mesh&) const noexcept = default;
     };
     std::optional<int> quality;
-    std::optional<float> tilt;
-    std::optional<vec4> background;
+    std::optional<glm::quat> orientation;
+    std::optional<glm::vec4> background;
     Mesh mesh;
 
     bool operator==(const SphericalMirrorProjection&) const noexcept = default;
@@ -295,8 +299,8 @@ using Projections = std::variant<NoProjection, CubemapProjection, CylindricalPro
 struct SGCT_EXPORT Viewport {
     enum class Eye { Mono, StereoLeft, StereoRight };
 
-    std::optional<vec2> position;
-    std::optional<vec2> size;
+    std::optional<glm::vec2> position;
+    std::optional<glm::vec2> size;
     Projections projection = NoProjection();
     std::optional<std::filesystem::path> overlayTexture;
     std::optional<std::filesystem::path> blendMaskTexture;
@@ -365,9 +369,15 @@ struct SGCT_EXPORT Window {
         bool operator==(const Scalable&) const noexcept = default;
     };
 
-    std::optional<ivec2> pos;
-    std::optional<ivec2> size;
-    std::optional<ivec2> resolution;
+    struct OpenXR {
+        bool enabled = true;
+
+        bool operator==(const OpenXR&) const noexcept = default;
+    };
+
+    std::optional<glm::ivec2> pos;
+    std::optional<glm::ivec2> size;
+    std::optional<glm::ivec2> resolution;
     std::vector<Viewport> viewports;
     int8_t id = 0;
     std::optional<std::string> name;
@@ -396,6 +406,7 @@ struct SGCT_EXPORT Window {
     std::optional<Spout> spout;
     std::optional<NDI> ndi;
     std::optional<Scalable> scalable;
+    std::optional<OpenXR> openxr;
 
     bool operator==(const Window&) const noexcept = default;
 };

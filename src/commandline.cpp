@@ -9,7 +9,28 @@
 #include <sgct/commandline.h>
 
 #include <iostream>
+#include <stdexcept>
 #include <string_view>
+#include <type_traits>
+
+namespace {
+    template <typename T>
+    std::optional<T> parseNumber(std::string_view flag, const std::string& value) {
+        try {
+            if constexpr (std::is_same_v<T, int>) {
+                return std::stoi(value);
+            }
+            else {
+                return std::stof(value);
+            }
+        }
+        catch (const std::logic_error&) {
+            // std::invalid_argument and std::out_of_range
+            std::cerr << "Invalid value for " << flag << ": " << value << '\n';
+            return std::nullopt;
+        }
+    }
+} // namespace
 
 namespace sgct {
 
@@ -36,7 +57,7 @@ Configuration parseArguments(std::vector<std::string>& arg) {
         }
         else if ((arg[i] == "--local" || arg[i] == "-l") && arg.size() > (i + 1)) {
             config.isServer = true;
-            config.nodeId = std::stoi(arg[i + 1]);
+            config.nodeId = parseNumber<int>(arg[i], arg[i + 1]);
             arg.erase(arg.begin() + i, arg.begin() + i + 2);
         }
         else if (arg[i] == "--notify" && arg.size() > (i + 1)) {
@@ -46,7 +67,7 @@ Configuration parseArguments(std::vector<std::string>& arg) {
                 else if (l == "info")    { return Log::Level::Info; }
                 else if (l == "debug")   { return Log::Level::Debug; }
                 else {
-                    std::cerr << "Unknown logger level: " << std::string(l);
+                    std::cerr << "Unknown logger level: " << std::string(l) << '\n';
                     return Log::Level::Info;
                 }
             } (arg[i + 1]);
@@ -67,7 +88,10 @@ Configuration parseArguments(std::vector<std::string>& arg) {
             arg.erase(arg.begin() + i);
         }
         else if (arg[i] == "--number-capture-threads" && arg.size() > (i + 1)) {
-            config.nCaptureThreads = std::max(std::stoi(arg[i + 1]), 1);
+            const std::optional<int> n = parseNumber<int>(arg[i], arg[i + 1]);
+            if (n.has_value()) {
+                config.nCaptureThreads = std::max(*n, 1);
+            }
             arg.erase(arg.begin() + i, arg.begin() + i + 2);
         }
         else if (arg[i] == "--screenshot-path" && arg.size() > (i + 1)) {
@@ -87,15 +111,17 @@ Configuration parseArguments(std::vector<std::string>& arg) {
             arg.erase(arg.begin() + i);
         }
         else if (arg[i] == "--capture-frame" && arg.size() > (i + 1)) {
-            config.captureFrame = static_cast<unsigned int>(
-                std::max(std::stoi(arg[i + 1]), 1)
-            );
+            const std::optional<int> n = parseNumber<int>(arg[i], arg[i + 1]);
+            if (n.has_value()) {
+                config.captureFrame = static_cast<unsigned int>(std::max(*n, 1));
+            }
             arg.erase(arg.begin() + i, arg.begin() + i + 2);
         }
         else if (arg[i] == "--exit-after-frame" && arg.size() > (i + 1)) {
-            config.exitAfterFrame = static_cast<unsigned int>(
-                std::max(std::stoi(arg[i + 1]), 1)
-            );
+            const std::optional<int> n = parseNumber<int>(arg[i], arg[i + 1]);
+            if (n.has_value()) {
+                config.exitAfterFrame = static_cast<unsigned int>(std::max(*n, 1));
+            }
             arg.erase(arg.begin() + i, arg.begin() + i + 2);
         }
         else if (arg[i] == "--print-wait-message") {
@@ -103,7 +129,7 @@ Configuration parseArguments(std::vector<std::string>& arg) {
             arg.erase(arg.begin() + i);
         }
         else if (arg[i] == "--wait-timeout" && arg.size() > (i + 1)) {
-            config.waitTimeout = std::stof(arg[i + 1]);
+            config.waitTimeout = parseNumber<float>(arg[i], arg[i + 1]);
             arg.erase(arg.begin() + i, arg.begin() + i + 2);
         }
         else {
@@ -136,12 +162,6 @@ Parameters:
     Disable frame sync
 --notify <"error", "warning", "info", or "debug">
     Set the notify level used in the Log
---capture-jpg
-    Use jpg images for screen capture
---capture-tga
-    Use tga images for screen capture
---export-correction-meshes
-    Exports the correction warping meshes to OBJ files when loading them
 --screenshot-path
     Sets the file path for the screenshots location
 --screenshot-prefix
@@ -157,6 +177,10 @@ Parameters:
     automated validation that an application renders correctly
 --exit-after-frame <integer>
     Terminate the application after the given number of frames have been rendered
+--print-wait-message
+    Print a message while waiting for the synchronization with the other nodes
+--wait-timeout <float>
+    Set the number of seconds to wait for the other nodes before aborting
 )";
 }
 

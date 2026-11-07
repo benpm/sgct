@@ -19,53 +19,14 @@
 #include <csetjmp>
 #include <cstdio>
 #include <cstdlib>
-#include <memory>
 #include <stdexcept>
 #include <string>
 #include <utility>
 
-#ifdef WIN32
-#include <CodeAnalysis/warnings.h>
-#pragma warning(push)
-#pragma warning(disable : ALL_CODE_ANALYSIS_WARNINGS)
-#endif // WIN32
-
-#ifdef __clang__
-#pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wcast-qual"
-#pragma clang diagnostic ignored "-Wimplicit-fallthrough"
-#pragma clang diagnostic ignored "-Wold-style-cast"
-#elif defined __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Walloc-zero"
-#pragma GCC diagnostic ignored "-Wcast-qual"
-#pragma GCC diagnostic ignored "-Wold-style-cast"
-#pragma GCC diagnostic ignored "-Wtype-limits"
-#pragma GCC diagnostic ignored "-Wuseless-cast"
-#pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant"
-#endif // __clang__
-
-// Include stb at global scope (not in an anonymous namespace): clang would otherwise nest
-// the stb headers' `namespace std` inside the anonymous namespace, making every later
-// `std::` reference ambiguous. The *_STATIC macros give internal linkage, which is what
-// the anonymous namespace was providing.
-#define STBI_NO_SIMD
-#define STB_IMAGE_WRITE_STATIC
-#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <stb_image.h>
 #include <stb_image_write.h>
 
-#define STB_IMAGE_STATIC
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
-#ifdef __clang__
-#pragma clang diagnostic pop
-#elif __GNUC__
-#pragma GCC diagnostic pop
-#endif // __clang__
-
 #ifdef WIN32
-#pragma warning(pop)
 #pragma warning(disable : 4611)
 #endif // WIN32
 
@@ -73,10 +34,36 @@
 
 namespace sgct {
 
-Image::~Image() {
-    if (_data) {
-        stbi_image_free(_data);
+Image::Image(Image&& rhs) noexcept
+    : _nChannels(std::exchange(rhs._nChannels, 0))
+    , _size(std::exchange(rhs._size, glm::ivec2(0, 0)))
+    , _dataSize(std::exchange(rhs._dataSize, 0))
+    , _bytesPerChannel(std::exchange(rhs._bytesPerChannel, 1))
+    , _data(std::exchange(rhs._data, nullptr))
+{}
+
+Image& Image::operator=(Image&& rhs) noexcept {
+    if (this != &rhs) {
+        freeData();
+        _nChannels = std::exchange(rhs._nChannels, 0);
+        _size = std::exchange(rhs._size, glm::ivec2(0, 0));
+        _dataSize = std::exchange(rhs._dataSize, 0);
+        _bytesPerChannel = std::exchange(rhs._bytesPerChannel, 1);
+        _data = std::exchange(rhs._data, nullptr);
     }
+    return *this;
+}
+
+Image::~Image() {
+    freeData();
+}
+
+void Image::freeData() {
+    // The data is either allocated by stb_image or by allocateOrResizeData, both of
+    // which use malloc, so we have to free it with the matching function
+    stbi_image_free(_data);
+    _data = nullptr;
+    _dataSize = 0;
 }
 
 void Image::load(const std::filesystem::path& filename) {
@@ -84,9 +71,13 @@ void Image::load(const std::filesystem::path& filename) {
         throw Err(9000, "Cannot load empty filepath");
     }
 
-    stbi_set_flip_vertically_on_load(1);
+    freeData();
     std::string name = filename.string();
+
+    stbi_set_flip_vertically_on_load_thread(1);
     _data = stbi_load(name.c_str(), &_size.x, &_size.y, &_nChannels, 0);
+    stbi_set_flip_vertically_on_load_thread(0);
+    
     if (_data == nullptr) {
         throw Err(
             9001, std::format("Could not open file '{}' for loading image", name));
@@ -103,10 +94,14 @@ void Image::load(const std::filesystem::path& filename) {
 }
 
 void Image::load(unsigned char* data, int length) {
-    stbi_set_flip_vertically_on_load(1);
+    freeData();
+
+    stbi_set_flip_vertically_on_load_thread(1);
     _data = stbi_load_from_memory(data, length, &_size.x, &_size.y, &_nChannels, 0);
+    stbi_set_flip_vertically_on_load_thread(0);
+
     if (_data == nullptr) {
-        throw Err(9001, "Could not load image from memory buffer");
+        throw Err(9003, "Could not load image from memory");
     }
     _bytesPerChannel = 1;
     _dataSize = _size.x * _size.y * _nChannels * _bytesPerChannel;
@@ -141,7 +136,6 @@ void Image::save(const std::filesystem::path& filename) {
     if (fp == nullptr) {
         throw Err(9008, std::format("Cannot create PNG file '{}'", f));
     }
-    const std::unique_ptr<FILE, int(*)(FILE*)> fpGuard(fp, &fclose);
 
     // Initialize stuff
     png_structp png = png_create_write_struct(
@@ -151,6 +145,7 @@ void Image::save(const std::filesystem::path& filename) {
         nullptr
     );
     if (!png) {
+        fclose(fp);
         throw Err(9009, "Failed to create PNG struct");
     }
 
@@ -170,11 +165,13 @@ void Image::save(const std::filesystem::path& filename) {
     png_infop info = png_create_info_struct(png);
     if (!info) {
         png_destroy_write_struct(&png, nullptr);
+        fclose(fp);
         throw Err(9010, "Failed to create PNG info struct");
     }
 
     if (setjmp(png_jmpbuf(png))) {
         png_destroy_write_struct(&png, &info);
+        fclose(fp);
         throw Err(9011, "One of the called PNG functions failed");
     }
 
@@ -223,6 +220,7 @@ void Image::save(const std::filesystem::path& filename) {
 
     png_write_end(png, nullptr);
     png_destroy_write_struct(&png, &info);
+    fclose(fp);
 
     const double t = (time() - t0) * 1000.0;
     Log::Debug(std::format("'{}' was saved successfully ({:.2f} ms)", filename, t));
@@ -244,12 +242,12 @@ int Image::bytesPerChannel() const {
     return _bytesPerChannel;
 }
 
-ivec2 Image::size() const {
+glm::ivec2 Image::size() const {
     return _size;
 }
 
-void Image::setSize(ivec2 size) {
-    _size = std::move(size);
+void Image::setSize(glm::ivec2 size) {
+    _size = size;
 }
 
 void Image::setChannels(int channels) {
@@ -275,17 +273,14 @@ void Image::allocateOrResizeData() {
     }
 
     if (_data && _dataSize != dataSize) {
-        // Reallocate if needed. _data may come from stb (malloc) or from the branch
-        // below, so both allocation paths must match ~Image's stbi_image_free
-        stbi_image_free(_data);
-        _data = nullptr;
-        _dataSize = 0;
+        // Reallocate if needed
+        freeData();
     }
 
     if (!_data) {
         _data = static_cast<unsigned char*>(std::malloc(dataSize));
-        if (_data == nullptr) {
-            throw Err(9013, std::format("Failed to allocate {} bytes", dataSize));
+        if (!_data) {
+            throw Err(9004, std::format("Failed to allocate {} bytes", dataSize));
         }
         _dataSize = dataSize;
 

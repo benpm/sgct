@@ -1,43 +1,84 @@
 {
+  "$schema": "https://raw.githubusercontent.com/microsoft/vcpkg-tool/main/docs/vcpkg.schema.json",
   "name": "sgct",
-  "version-string" : "3.0.0",
-  "homepage" : "https://github.com/sgct/sgct/",
+  "version": "4.0.0",
+  "description": [
+    "Simple Graphics Cluster Toolkit.",
+    "This manifest is used when building SGCT standalone from this checkout. See the port under support/vcpkg/ports/sgct declaring the same runtime dependencies for consumers."
+  ],
+  "homepage": "https://github.com/SGCT/SGCT/",
   "license": "BSD-3-Clause",
-  "dependencies" : 
-  [
+  "supports": "!(osx | uwp | android)",
+  "vcpkg-configuration": {
+    "default-registry": {
+      "kind": "builtin",
+      "baseline": "04a9d8e5212d01ee1dd9478eadd9caade4f8b0d4"
+    },
+    "overlay-ports": [
+      "./support/vcpkg/ports"
+    ]
+  },
+  "dependencies": [
     "catch2",
     "freetype",
-    "fmt",
     "glfw3",
     "glm",
+    "json-schema-validator",
     "libpng",
     "minizip",
     "nlohmann-json",
+    "openxr-loader",
     "scnlib",
-    "stb",
+    "stbimage",
     "tinyxml2",
     "zlib",
     {
-       "name": "glad",
-       "features" : ["wgl", "loader", "extensions"]
+      "name": "tracy",
+      "platform": "!(windows & arm)"
+    },
+    {
+      "name": "glad",
+      "features": [
+        "extensions",
+        "loader"
+      ]
+    },
+    {
+      "name": "glad",
+      "features": [
+        "wgl"
+      ],
+      "platform": "windows"
+    },
+    {
+      "name": "spout2",
+      "platform": "windows & !arm64"
+    },
+    {
+      "name": "vulkan",
+      "platform": "windows"
     }
   ],
-  "features" : {
-    "freetype" : {
-      "description": "Build SGCT with Freetype support", 
-      "dependencies": ["freetype"]
+  "features": {
+    "examples": {
+      "description": "Build the example applications, such as simplecube which demonstrates the post-process callback",
+      "dependencies": [
+        {
+          "name": "imgui",
+          "features": [
+            "glfw-binding",
+            "opengl3-binding"
+          ]
+        }
+      ]
     },
-     "openvr" : {
-      "description": "Build SGCT with OpenVR support", 
-      "dependencies": ["openvr"]
+    "ndi": {
+      "description": "Build SGCT with NDI support. Proprietary SDK, the resulting package cannot be redistributed",
+      "supports": "windows"
     },
-     "spout2" : {
-      "description": "Build SGCT with Spout2 support", 
-      "dependencies": ["spout2"]
-    },
-    "tracy": { 
-      "description": "Enable Tracy profiling support", 
-      "dependencies": ["tracy"]
+    "scalable": {
+      "description": "Build SGCT with Scalable SDK support. Proprietary SDK, the resulting package cannot be redistributed",
+      "supports": "windows"
     }
   }
 }

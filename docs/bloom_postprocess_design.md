@@ -254,14 +254,14 @@ vec3 ACESFilm(vec3 x) {
 ### Modified simplecube Structure
 
 **New Files**:
-- `apps/simplecube/bloom_shaders.h` - Shader source code
-- `apps/simplecube/bloom_effect.h` - Bloom effect class declaration
-- `apps/simplecube/bloom_effect.cpp` - Bloom effect implementation
+- `examples/simplecube/bloom_shaders.h` - Shader source code
+- `examples/simplecube/bloom_effect.h` - Bloom effect class declaration
+- `examples/simplecube/bloom_effect.cpp` - Bloom effect implementation
 - `config/single_bloom.json` - Example config with HDR enabled
 
 **Modified Files**:
-- `apps/simplecube/main.cpp` - Initialize bloom, update postProcess callback
-- `apps/simplecube/CMakeLists.txt` - Add bloom source files to build
+- `examples/simplecube/main.cpp` - Initialize bloom, update postProcess callback
+- `examples/simplecube/CMakeLists.txt` - Add bloom source files to build
 
 ### Bloom Effect Class Design
 
@@ -584,7 +584,7 @@ Test with simplecube's colored boxes:
 - `include/sgct/window.h` - Window::renderScreenQuad() helper
 - `include/sgct/config.h` - Window::ColorBitDepth enum for buffer format config
 - `src/window.cpp` - colorBitDepthToColorFormat() mapping (line 97-105)
-- `apps/simplecube/main.cpp` - Current postProcess implementation example
+- `examples/simplecube/main.cpp` - Current postProcess implementation example
 
 ## Implementation Checklist
 

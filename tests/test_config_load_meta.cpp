@@ -10,7 +10,6 @@
 #include <catch2/matchers/catch_matchers_exception.hpp>
 
 #include <sgct/config.h>
-#include <sgct/math.h>
 #include "schema.h"
 
 using namespace sgct;
@@ -340,6 +339,8 @@ TEST_CASE("Validate: Meta/Author/Wrong Type", "[validate]") {
   "version": 1,
   "masteraddress": "localhost",
   "meta": {
+    "name": "abc",
+    "description": "abc",
     "author": 123
   }
 }
@@ -354,6 +355,7 @@ TEST_CASE("Validate: Meta/Description/Wrong Type", "[validate]") {
   "version": 1,
   "masteraddress": "localhost",
   "meta": {
+    "name": "abc",
     "description": 123
   }
 }
@@ -368,6 +370,8 @@ TEST_CASE("Validate: Meta/License/Wrong Type", "[validate]") {
   "version": 1,
   "masteraddress": "localhost",
   "meta": {
+    "name": "abc",
+    "description": "abc",
     "license": 123
   }
 }
@@ -382,6 +386,7 @@ TEST_CASE("Validate: Meta/Name/Wrong Type", "[validate]") {
   "version": 1,
   "masteraddress": "localhost",
   "meta": {
+    "description": "abc",
     "name": 123
   }
 }
@@ -396,6 +401,8 @@ TEST_CASE("Validate: Meta/Version/Wrong Type", "[validate]") {
   "version": 1,
   "masteraddress": "localhost",
   "meta": {
+    "name": "abc",
+    "description": "abc",
     "version": 123
   }
 }

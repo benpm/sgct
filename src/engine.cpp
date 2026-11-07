@@ -16,20 +16,21 @@
 #include <sgct/network.h>
 #include <sgct/networkmanager.h>
 #include <sgct/node.h>
+#ifdef SGCT_HAS_OPENXR
+#include <sgct/openxr.h>
+#endif // SGCT_HAS_OPENXR
 #include <sgct/profiling.h>
 #include <sgct/shadermanager.h>
 #include <sgct/shareddata.h>
 #include <sgct/statisticsrenderer.h>
 #include <sgct/texturemanager.h>
-#ifdef SGCT_HAS_VRPN
-#include <sgct/trackingmanager.h>
-#endif // SGCT_HAS_VRPN
 #include <sgct/version.h>
 #include <chrono>
 #include <iostream>
 #include <iterator>
 #include <numeric>
 #include <mutex>
+#include <ranges>
 #include <stdexcept>
 
 #ifdef WIN32
@@ -85,6 +86,11 @@ namespace {
         a[0] = v;
     }
 
+    Window* openXRWindow(const std::vector<std::unique_ptr<Window>>& windows) {
+        auto it = std::ranges::find_if(windows, std::mem_fn(&Window::isOpenXREnabled));
+        return it != windows.end() ? it->get() : nullptr;
+    }
+
     Engine::Settings createSettings(config::Cluster cluster, const Configuration& config)
     {
         Engine::Settings res;
@@ -100,6 +106,8 @@ namespace {
         if (config.omitWindowNameInScreenshot) {
             res.capture.addWindowName = !(*config.omitWindowNameInScreenshot);
         }
+        res.printSyncMessage = config.printWaitMessage.value_or(res.printSyncMessage);
+        res.syncTimeout = config.waitTimeout.value_or(res.syncTimeout);
         if (cluster.settings) {
             if (cluster.settings->display) {
                 res.swapInterval = cluster.settings->display->swapInterval.value_or(
@@ -122,6 +130,17 @@ namespace {
                     static_cast<uint64_t>(cluster.capture->range->first),
                     static_cast<uint64_t>(cluster.capture->range->last)
                 };
+            }
+
+            if (cluster.capture->bitDepth) {
+                switch (*cluster.capture->bitDepth) {
+                    case config::Capture::BitDepth::Depth8:
+                        res.capture.bitDepth = 8;
+                        break;
+                    case config::Capture::BitDepth::Depth16:
+                        res.capture.bitDepth = 16;
+                        break;
+                }
             }
         }
 
@@ -307,11 +326,6 @@ Engine::Engine(config::Cluster cluster, Callbacks callbacks, const Configuration
         std::move(callbacks.dataTransferStatus),
         std::move(callbacks.dataTransferAcknowledge)
     );
-#ifdef SGCT_HAS_VRPN
-    for (const config::Tracker& tracker : cluster.trackers) {
-        TrackingManager::instance().applyTracker(tracker);
-    }
-#endif // SGCT_HAS_VRPN
     int clusterId = -1;
     // Check in cluster configuration which it is
     if (netMode == NetworkManager::NetworkMode::Remote) {
@@ -548,6 +562,12 @@ void Engine::initialize() {
 
     updateFrustums();
 
+#ifdef SGCT_HAS_OPENXR
+    if (openXRWindow(wins)) {
+        openxr::initialize(nearClipPlane(), farClipPlane());
+    }
+#endif // SGCT_HAS_OPENXR
+
 #ifdef SGCT_HAS_TEXT
 #ifdef WIN32
     constexpr std::string_view FontName = "verdanab.ttf";
@@ -573,13 +593,6 @@ void Engine::initialize() {
         wins.cend(),
         std::mem_fn(&Window::initializeContextSpecific)
     );
-
-#ifdef SGCT_HAS_VRPN
-    // Start sampling tracking data
-    if (isMaster()) {
-        TrackingManager::instance().startSampling();
-    }
-#endif // SGCT_HAS_VRPN
 }
 
 Engine::~Engine() {
@@ -625,6 +638,13 @@ Engine::~Engine() {
         std::for_each(wins.cbegin(), wins.cend(), std::mem_fn(&Window::closeWindow));
     }
 
+#ifdef SGCT_HAS_OPENXR
+    if (openxr::isHMDActive()) {
+        Log::Debug("Shutting down OpenXR");
+        openxr::shutdown();
+    }
+#endif // SGCT_HAS_OPENXR
+
     // Close TCP connections
     Log::Debug("Destroying network manager");
     NetworkManager::destroy();
@@ -662,6 +682,10 @@ Engine::~Engine() {
     Log::destroy();
 
     Log::Debug("Terminating glfw");
+    // The error callback throws exceptions, which must neither happen in the destructor
+    // nor for GLFW functions that are called after the engine was destroyed, for example
+    // by sgct::time
+    glfwSetErrorCallback(nullptr);
     glfwTerminate();
 
     Log::Debug("Finished cleaning");
@@ -788,12 +812,6 @@ void Engine::exec() {
     while (!_shouldTerminate && !thisNode.closeAllWindows() &&
            NetworkManager::instance().isRunning()) [[unlikely]]
     {
-#ifdef SGCT_HAS_VRPN
-        if (isMaster()) {
-            TrackingManager::instance().updateTrackingDevices();
-        }
-#endif // SGCT_HAS_VRPN
-
         // Frame numbers used by --capture-frame are 1-based, _frameCounter is 0-based
         if (_captureFrame && (_frameCounter + 1) == *_captureFrame) {
             _shouldTakeScreenshot = true;
@@ -829,6 +847,13 @@ void Engine::exec() {
             _postSyncPreDrawFn();
         }
 
+#ifdef SGCT_HAS_OPENXR
+        if (openXRWindow(wins)) {
+            ZoneScopedN("[SGCT] OpenXR Update Poses");
+            openxr::updatePoses();
+        }
+#endif // SGCT_HAS_OPENXR
+
         {
             ZoneScopedN("Statistics update");
             const double startFrameTime = glfwGetTime();
@@ -856,6 +881,13 @@ void Engine::exec() {
             ZoneScopedN("[SGCT] PostDraw");
             _postDrawFn();
         }
+
+#ifdef SGCT_HAS_OPENXR
+        if (Window* window = openXRWindow(wins)) {
+            ZoneScopedN("[SGCT] OpenXR Submit");
+            openxr::copyWindowToHMD(window);
+        }
+#endif // SGCT_HAS_OPENXR
 
         if (_statisticsRenderer) [[unlikely]] {
             ZoneScopedN("Statistics Update");
@@ -1063,13 +1095,13 @@ void Engine::setStatsGraphScale(float scale) {
     }
 }
 
-vec2 Engine::statsGraphOffset() const {
-    return _statisticsRenderer ? _statisticsRenderer->offset() : vec2(-1.f, -1.f);
+glm::vec2 Engine::statsGraphOffset() const {
+    return _statisticsRenderer ? _statisticsRenderer->offset() : glm::vec2(-1.f, -1.f);
 }
 
-void Engine::setStatsGraphOffset(vec2 offset) {
+void Engine::setStatsGraphOffset(glm::vec2 offset) {
     if (_statisticsRenderer) {
-        _statisticsRenderer->setOffset(offset);
+        _statisticsRenderer->setOffset(std::move(offset));
     }
 }
 
@@ -1090,7 +1122,7 @@ Engine::DrawFunction Engine::draw2DFunction() const {
     return _draw2DFn;
 }
 
-void (*Engine::postProcessFunction() const)(const Window&, FrustumMode, unsigned int, ivec2) {
+Engine::PostProcessFunction Engine::postProcessFunction() const {
     return _postProcessFn;
 }
 

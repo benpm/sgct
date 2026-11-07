@@ -10,7 +10,6 @@
 #include <catch2/matchers/catch_matchers_exception.hpp>
 
 #include <sgct/config.h>
-#include <sgct/math.h>
 #include "schema.h"
 
 using namespace sgct;
@@ -57,7 +56,7 @@ TEST_CASE("Load: PlanarProjection/Minimal", "[parse]") {
                 .port = 1,
                 .windows = {
                     Window {
-                        .size = ivec2{ 640, 480 },
+                        .size = glm::ivec2(640, 480),
                         .viewports = {
                             Viewport {
                                 .projection = PlanarProjection {
@@ -127,7 +126,7 @@ TEST_CASE("Load: PlanarProjection/Distance", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .projection = PlanarProjection {
@@ -197,7 +196,7 @@ TEST_CASE("Load: PlanarProjection/Distance", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .projection = PlanarProjection {
@@ -269,7 +268,7 @@ TEST_CASE("Load: PlanarProjection/Orientation", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .projection = PlanarProjection {
@@ -279,7 +278,7 @@ TEST_CASE("Load: PlanarProjection/Orientation", "[parse]") {
                                             .right = 3.f,
                                             .up = 4.f
                                         },
-                                        .orientation = quat{ 1.f, 2.f, 3.f, 4.f }
+                                        .orientation = glm::quat(4.f, 1.f, 2.f, 3.f)
                                     }
                                 }
                             }
@@ -339,7 +338,7 @@ TEST_CASE("Load: PlanarProjection/Orientation", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .projection = PlanarProjection {
@@ -349,7 +348,7 @@ TEST_CASE("Load: PlanarProjection/Orientation", "[parse]") {
                                             .right = 8.f,
                                             .up = 9.f
                                         },
-                                        .orientation = quat{5.f, 6.f, 7.f, 8.f }
+                                        .orientation = glm::quat(8.f, 5.f, 6.f, 7.f)
                                     }
                                 }
                             }
@@ -411,7 +410,7 @@ TEST_CASE("Load: PlanarProjection/Offset", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .projection = PlanarProjection {
@@ -421,7 +420,7 @@ TEST_CASE("Load: PlanarProjection/Offset", "[parse]") {
                                             .right = 3.f,
                                             .up = 4.f
                                         },
-                                        .offset = vec3{ 1.f, 2.f, 3.f }
+                                        .offset = glm::vec3(1.f, 2.f, 3.f)
                                     }
                                 }
                             }
@@ -481,7 +480,7 @@ TEST_CASE("Load: PlanarProjection/Offset", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .projection = PlanarProjection {
@@ -491,7 +490,7 @@ TEST_CASE("Load: PlanarProjection/Offset", "[parse]") {
                                             .right = 8.f,
                                             .up = 9.f
                                         },
-                                        .offset = vec3{5.f, 6.f, 7.f }
+                                        .offset = glm::vec3(5.f, 6.f, 7.f)
                                     }
                                 }
                             }
@@ -554,7 +553,7 @@ TEST_CASE("Load: PlanarProjection/Full", "[parse]") {
                 .port = 1,
                 .windows = {
                     Window {
-                        .size = ivec2{ 640, 480 },
+                        .size = glm::ivec2(640, 480),
                         .viewports = {
                             Viewport {
                                 .projection = PlanarProjection {
@@ -565,8 +564,8 @@ TEST_CASE("Load: PlanarProjection/Full", "[parse]") {
                                         .up = 4.f,
                                         .distance = 5.f
                                     },
-                                    .orientation = quat{ 7.f, 8.f, 9.f, 6.f },
-                                    .offset = vec3{ 10.f, 11.f, 12.f }
+                                    .orientation = glm::quat(6.f, 7.f, 8.f, 9.f),
+                                    .offset = glm::vec3(10.f, 11.f, 12.f)
                                 }
                             }
                         }
@@ -599,12 +598,15 @@ TEST_CASE("Validate: PlanarProjection/FOV/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "fov": "abc"
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": "abc"
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -626,12 +628,15 @@ TEST_CASE("Validate: PlanarProjection/FOV/All/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "fov": {}
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": {}
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -653,16 +658,19 @@ TEST_CASE("Validate: PlanarProjection/FOV/Down/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "fov": {
-                "left": 2,
-                "right": 3,
-                "up": 4
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": {
+                  "left": 2,
+                  "right": 3,
+                  "up": 4
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -684,17 +692,20 @@ TEST_CASE("Validate: PlanarProjection/FOV/Down/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "fov": {
-                "down": "abc",
-                "left": 2,
-                "right": 3,
-                "up": 4
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": {
+                  "down": "abc",
+                  "left": 2,
+                  "right": 3,
+                  "up": 4
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -716,16 +727,19 @@ TEST_CASE("Validate: PlanarProjection/FOV/Left/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "fov": {
-                "down": 1,
-                "right": 3,
-                "up": 4
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": {
+                  "down": 1,
+                  "right": 3,
+                  "up": 4
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -747,17 +761,20 @@ TEST_CASE("Validate: PlanarProjection/FOV/Left/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "fov": {
-                "down": 1,
-                "left": "abc",
-                "right": 3,
-                "up": 4
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": {
+                  "down": 1,
+                  "left": "abc",
+                  "right": 3,
+                  "up": 4
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -779,16 +796,19 @@ TEST_CASE("Validate: PlanarProjection/FOV/Right/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "fov": {
-                "down": 1,
-                "left": 2,
-                "up": 4
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": {
+                  "down": 1,
+                  "left": 2,
+                  "up": 4
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -810,17 +830,20 @@ TEST_CASE("Validate: PlanarProjection/FOV/Right/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "fov": {
-                "down": 1,
-                "left": 2,
-                "right": "abc",
-                "up": 4
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": {
+                  "down": 1,
+                  "left": 2,
+                  "right": "abc",
+                  "up": 4
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -842,16 +865,19 @@ TEST_CASE("Validate: PlanarProjection/FOV/Up/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "fov": {
-                "down": 1,
-                "left": 2,
-                "right": 3
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": {
+                  "down": 1,
+                  "left": 2,
+                  "right": 3
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -873,17 +899,20 @@ TEST_CASE("Validate: PlanarProjection/FOV/Up/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "fov": {
-                "down": 1,
-                "left": 2,
-                "right": 3,
-                "up": "abc"
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": {
+                  "down": 1,
+                  "left": 2,
+                  "right": 3,
+                  "up": "abc"
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -905,12 +934,16 @@ TEST_CASE("Validate: PlanarProjection/Orientation/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "orientation": "abc"
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "orientation": "abc"
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -932,12 +965,16 @@ TEST_CASE("Validate: PlanarProjection/Orientation/All/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "orientation": {}
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "orientation": {}
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -959,15 +996,19 @@ TEST_CASE("Validate: PlanarProjection/Orientation/Pitch/Missing", "[validate]") 
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "orientation": {
-                "yaw": 2,
-                "roll": 3
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "orientation": {
+                  "yaw": 2,
+                  "roll": 3
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -989,16 +1030,20 @@ TEST_CASE("Validate: PlanarProjection/Orientation/Pitch/Wrong Type", "[validate]
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "orientation": {
-                "pitch": "abc",
-                "yaw": 2,
-                "roll": 3
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "orientation": {
+                  "pitch": "abc",
+                  "yaw": 2,
+                  "roll": 3
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -1020,15 +1065,19 @@ TEST_CASE("Validate: PlanarProjection/Orientation/Yaw/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "orientation": {
-                "pitch": 1,
-                "roll": 3
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "orientation": {
+                  "pitch": 1,
+                  "roll": 3
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -1050,16 +1099,20 @@ TEST_CASE("Validate: PlanarProjection/Orientation/Yaw/Wrong Type", "[validate]")
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "orientation": {
-                "pitch": 1,
-                "yaw": "abc",
-                "roll": 3
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "orientation": {
+                  "pitch": 1,
+                  "yaw": "abc",
+                  "roll": 3
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -1081,15 +1134,19 @@ TEST_CASE("Validate: PlanarProjection/Orientation/Roll/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "orientation": {
-                "pitch": 1,
-                "yaw": 2
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "orientation": {
+                  "pitch": 1,
+                  "yaw": 2
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -1111,16 +1168,20 @@ TEST_CASE("Validate: PlanarProjection/Orientation/Roll/Wrong Type", "[validate]"
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "orientation": {
-                "pitch": 1,
-                "yaw": 2,
-                "roll": "abc"
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "orientation": {
+                  "pitch": 1,
+                  "yaw": 2,
+                  "roll": "abc"
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -1142,16 +1203,20 @@ TEST_CASE("Validate: PlanarProjection/Orientation/X/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "orientation": {
-                "y": 2,
-                "z": 3,
-                "w": 4
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "orientation": {
+                  "y": 2,
+                  "z": 3,
+                  "w": 4
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -1173,17 +1238,21 @@ TEST_CASE("Validate: PlanarProjection/Orientation/X/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "orientation": {
-                "x": "abc",
-                "y": 2,
-                "z": 3,
-                "w": 4
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "orientation": {
+                  "x": "abc",
+                  "y": 2,
+                  "z": 3,
+                  "w": 4
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -1205,16 +1274,20 @@ TEST_CASE("Validate: PlanarProjection/Orientation/Y/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "orientation": {
-                "x": 1,
-                "z": 3,
-                "w": 4
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "orientation": {
+                  "x": 1,
+                  "z": 3,
+                  "w": 4
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -1236,17 +1309,21 @@ TEST_CASE("Validate: PlanarProjection/Orientation/Y/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "orientation": {
-                "x": 1,
-                "y": "abc",
-                "z": 3,
-                "w": 4
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "orientation": {
+                  "x": 1,
+                  "y": "abc",
+                  "z": 3,
+                  "w": 4
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -1268,16 +1345,20 @@ TEST_CASE("Validate: PlanarProjection/Orientation/Z/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "orientation": {
-                "x": 1,
-                "y": 2,
-                "w": 4
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "orientation": {
+                  "x": 1,
+                  "y": 2,
+                  "w": 4
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -1299,17 +1380,21 @@ TEST_CASE("Validate: PlanarProjection/Orientation/Z/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "orientation": {
-                "x": 1,
-                "y": 2,
-                "z": "abc",
-                "w": 4
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "orientation": {
+                  "x": 1,
+                  "y": 2,
+                  "z": "abc",
+                  "w": 4
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -1331,16 +1416,20 @@ TEST_CASE("Validate: PlanarProjection/Orientation/W/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "orientation": {
-                "x": 1,
-                "y": 2,
-                "z": 3
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "orientation": {
+                  "x": 1,
+                  "y": 2,
+                  "z": 3
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -1362,17 +1451,21 @@ TEST_CASE("Validate: PlanarProjection/Orientation/W/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "orientation": {
-                "x": 1,
-                "y": 2,
-                "z": 3,
-                "w": "abc"
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "orientation": {
+                  "x": 1,
+                  "y": 2,
+                  "z": 3,
+                  "w": "abc"
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -1394,12 +1487,16 @@ TEST_CASE("Validate: PlanarProjection/Offset/All/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "offset": {}
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "offset": {}
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -1421,15 +1518,19 @@ TEST_CASE("Validate: PlanarProjection/Offset/X/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "offset": {
-                "y": 2,
-                "z": 3
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "offset": {
+                  "y": 2,
+                  "z": 3
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -1451,16 +1552,20 @@ TEST_CASE("Validate: PlanarProjection/Offset/X/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "offset": {
-                "x": "abc",
-                "y": 2,
-                "z": 3
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "offset": {
+                  "x": "abc",
+                  "y": 2,
+                  "z": 3
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -1482,15 +1587,19 @@ TEST_CASE("Validate: PlanarProjection/Offset/Y/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "offset": {
-                "x": 1,
-                "z": 3
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "offset": {
+                  "x": 1,
+                  "z": 3
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -1512,16 +1621,20 @@ TEST_CASE("Validate: PlanarProjection/Offset/Y/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "offset": {
-                "x": 1,
-                "y": "abc",
-                "z": 3
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "offset": {
+                  "x": 1,
+                  "y": "abc",
+                  "z": 3
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -1543,15 +1656,19 @@ TEST_CASE("Validate: PlanarProjection/Offset/Z/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "offset": {
-                "x": 1,
-                "y": 2
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "offset": {
+                  "x": 1,
+                  "y": 2
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -1573,16 +1690,20 @@ TEST_CASE("Validate: PlanarProjection/Offset/Z/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "PlanarProjection",
-              "offset": {
-                "x": 1,
-                "y": 2,
-                "z": "abc"
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "PlanarProjection",
+                "fov": { "hfov": 90.0, "vfov": 60.0 },
+                "offset": {
+                  "x": 1,
+                  "y": 2,
+                  "z": "abc"
+                }
               }
             }
-          }
+          ]
         }
       ]
     }

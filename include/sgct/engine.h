@@ -15,7 +15,6 @@
 #include <sgct/callbackdata.h>
 #include <sgct/config.h>
 #include <sgct/keys.h>
-#include <sgct/math.h>
 #include <sgct/modifiers.h>
 #include <sgct/mouse.h>
 #include <sgct/window.h>
@@ -71,6 +70,8 @@ SGCT_EXPORT double time();
 class SGCT_EXPORT Engine {
 public:
     using DrawFunction = void (*)(const RenderData&);
+    using PostProcessFunction =
+        void (*)(const Window&, FrustumMode, unsigned int, glm::ivec2);
 
     /**
      * Structure with all statistics gathered about different frametimes. The newest value
@@ -130,7 +131,7 @@ public:
         ///    0 = vertical sync off
         ///    1 = wait for vertical sync
         ///    2..inf = wait for every n-th vertical sync
-        int8_t swapInterval = 1;
+        int8_t swapInterval = 0;
 
         /// If this is true, a log message is printed to the console while a client is
         /// waiting for the master to connect or while the master is waiting for one or
@@ -154,7 +155,8 @@ public:
             std::filesystem::path capturePath;
 
             // The number of capture threads
-            int nCaptureThreads = std::max(std::thread::hardware_concurrency() / 2, 1u);
+            int nCaptureThreads =
+                static_cast<int>(std::max(std::thread::hardware_concurrency() / 2, 1u));
 
             /// If set to true, the node name is added to screenshots
             bool addNodeName = false;
@@ -164,6 +166,9 @@ public:
 
             /// The prefix to be used for all screenshots
             std::string prefix;
+
+            /// The number of bits per color channel in the saved screenshots (8 or 16)
+            int bitDepth = 8;
 
             /// Information about the screenshot limits. If there is no screenshot limit,
             /// this function returns `std::nullopt`. Otherwise the first component is the
@@ -205,11 +210,15 @@ public:
         /// This function is called after the draw stage but before the OpenGL buffer swap
         void (*postDraw)() = nullptr;
 
-        /// This function is called to apply post-processing effects to the rendered frame.
-        /// It receives the window being rendered, the frustum mode (eye), an input texture
-        /// containing the rendered frame, and the framebuffer size. The callback should
-        /// render the processed result back to the currently bound framebuffer.
-        void (*postProcess)(const Window&, FrustumMode, unsigned int, ivec2) = nullptr;
+        /// This function is called once per window and eye after the scene has been
+        /// rendered and before FXAA and the 2D rendering. It receives the window being
+        /// rendered, the frustum mode (eye), the texture containing the rendered frame,
+        /// and the size of that texture in pixels. The callback has to write the
+        /// processed image into the framebuffer that is bound when it is called, whose
+        /// viewport already covers the whole texture. Blending is disabled during the
+        /// call. If the callback needs its own framebuffers, it has to restore the
+        /// framebuffer binding and the viewport before returning
+        PostProcessFunction postProcess = nullptr;
 
         /// This is called before all SGCT components will be destroyed. The same shared
         /// context is active that was passed in the Callbacks::initOpenGL callback
@@ -388,7 +397,7 @@ public:
      *
      * \return The current offset value for the statistics graph
      */
-    vec2 statsGraphOffset() const;
+    glm::vec2 statsGraphOffset() const;
 
     /**
      * Sets the new offet value for the statistics graph rendering. This value determines
@@ -398,7 +407,7 @@ public:
      *
      * \param offset The new offset value for the statistics graph rendering
      */
-    void setStatsGraphOffset(vec2 offset);
+    void setStatsGraphOffset(glm::vec2 offset);
 
     /**
      * Takes an RGBA screenshot and saves it as a PNG file. If stereo rendering is enabled
@@ -453,7 +462,7 @@ public:
      *
      * \return The post-process function pointer, or nullptr if none was registered
      */
-    void (*postProcessFunction() const)(const Window&, FrustumMode, unsigned int, ivec2);
+    PostProcessFunction postProcessFunction() const;
 
 
     /**
@@ -584,7 +593,7 @@ private:
     void (*_postDrawFn)() = nullptr;
 
     /// Function pointer that is called for post-processing effects
-    void (*_postProcessFn)(const Window&, FrustumMode, unsigned int, ivec2) = nullptr;
+    PostProcessFunction _postProcessFn = nullptr;
 
     /// Function pointer that is called when the Engine is being destroyed
     void (*_cleanupFn)() = nullptr;

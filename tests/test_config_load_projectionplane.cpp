@@ -10,7 +10,6 @@
 #include <catch2/matchers/catch_matchers_exception.hpp>
 
 #include <sgct/config.h>
-#include <sgct/math.h>
 #include "schema.h"
 
 using namespace sgct;
@@ -55,13 +54,13 @@ TEST_CASE("Load: ProjectionPlane", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .projection = ProjectionPlane {
-                                        .lowerLeft = vec3 { 1.f, 2.f, 3.f },
-                                        .upperLeft = vec3 { 4.f, 5.f, 6.f },
-                                        .upperRight = vec3 { 7.f, 8.f, 9.f }
+                                        .lowerLeft = glm::vec3(1.f, 2.f, 3.f),
+                                        .upperLeft = glm::vec3(4.f, 5.f, 6.f),
+                                        .upperRight = glm::vec3(7.f, 8.f, 9.f)
                                     }
                                 }
                             }
@@ -117,13 +116,13 @@ TEST_CASE("Load: ProjectionPlane", "[parse]") {
                     .port = 1,
                     .windows = {
                         Window {
-                            .size = ivec2{ 640, 480 },
+                            .size = glm::ivec2(640, 480),
                             .viewports = {
                                 Viewport {
                                     .projection = ProjectionPlane {
-                                        .lowerLeft = vec3 { 10.f, 11.f, 12.f },
-                                        .upperLeft = vec3 { 13.f, 14.f, 15.f },
-                                        .upperRight = vec3 { 16.f, 17.f, 18.f }
+                                        .lowerLeft = glm::vec3(10.f, 11.f, 12.f),
+                                        .upperLeft = glm::vec3(13.f, 14.f, 15.f),
+                                        .upperRight = glm::vec3(16.f, 17.f, 18.f)
                                     }
                                 }
                             }
@@ -157,14 +156,17 @@ TEST_CASE("Validate: ProjectionPlane/LowerLeft/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": "abc",
-              "upperLeft": { "x": 1, "y": 2, "z": 3 },
-              "upperRight": { "x": 1, "y": 2, "z": 3 }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": "abc",
+                "upperleft": { "x": 1, "y": 2, "z": 3 },
+                "upperright": { "x": 1, "y": 2, "z": 3 }
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -186,14 +188,17 @@ TEST_CASE("Validate: ProjectionPlane/LowerLeft/All/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": {},
-              "upperLeft": { "x": 1, "y": 2, "z": 3 },
-              "upperRight": { "x": 1, "y": 2, "z": 3 }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": {},
+                "upperleft": { "x": 1, "y": 2, "z": 3 },
+                "upperright": { "x": 1, "y": 2, "z": 3 }
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -215,17 +220,20 @@ TEST_CASE("Validate: ProjectionPlane/LowerLeft/X/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": {
-                "y": 2,
-                "z": 3
-              },
-              "upperLeft": { "x": 1, "y": 2, "z": 3 },
-              "upperRight": { "x": 1, "y": 2, "z": 3 }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": {
+                  "y": 2,
+                  "z": 3
+                },
+                "upperleft": { "x": 1, "y": 2, "z": 3 },
+                "upperright": { "x": 1, "y": 2, "z": 3 }
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -247,18 +255,21 @@ TEST_CASE("Validate: ProjectionPlane/LowerLeft/X/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": {
-                "x": "abc",
-                "y": 2,
-                "z": 3
-              },
-              "upperLeft": { "x": 1, "y": 2, "z": 3 },
-              "upperRight": { "x": 1, "y": 2, "z": 3 }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": {
+                  "x": "abc",
+                  "y": 2,
+                  "z": 3
+                },
+                "upperleft": { "x": 1, "y": 2, "z": 3 },
+                "upperright": { "x": 1, "y": 2, "z": 3 }
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -280,17 +291,20 @@ TEST_CASE("Validate: ProjectionPlane/LowerLeft/Y/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": {
-                "x": 1,
-                "z": 3
-              },
-              "upperLeft": { "x": 1, "y": 2, "z": 3 },
-              "upperRight": { "x": 1, "y": 2, "z": 3 }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": {
+                  "x": 1,
+                  "z": 3
+                },
+                "upperleft": { "x": 1, "y": 2, "z": 3 },
+                "upperright": { "x": 1, "y": 2, "z": 3 }
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -312,18 +326,21 @@ TEST_CASE("Validate: ProjectionPlane/LowerLeft/Y/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": {
-                "x": 1,
-                "y": "abc",
-                "z": 3
-              },
-              "upperLeft": { "x": 1, "y": 2, "z": 3 },
-              "upperRight": { "x": 1, "y": 2, "z": 3 }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": {
+                  "x": 1,
+                  "y": "abc",
+                  "z": 3
+                },
+                "upperleft": { "x": 1, "y": 2, "z": 3 },
+                "upperright": { "x": 1, "y": 2, "z": 3 }
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -345,17 +362,20 @@ TEST_CASE("Validate: ProjectionPlane/LowerLeft/Z/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": {
-                "x": 1,
-                "y": 2
-              },
-              "upperLeft": { "x": 1, "y": 2, "z": 3 },
-              "upperRight": { "x": 1, "y": 2, "z": 3 }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": {
+                  "x": 1,
+                  "y": 2
+                },
+                "upperleft": { "x": 1, "y": 2, "z": 3 },
+                "upperright": { "x": 1, "y": 2, "z": 3 }
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -377,18 +397,21 @@ TEST_CASE("Validate: ProjectionPlane/LowerLeft/Z/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": {
-                "x": 1,
-                "y": 2,
-                "z": "abc"
-              },
-              "upperLeft": { "x": 1, "y": 2, "z": 3 },
-              "upperRight": { "x": 1, "y": 2, "z": 3 }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": {
+                  "x": 1,
+                  "y": 2,
+                  "z": "abc"
+                },
+                "upperleft": { "x": 1, "y": 2, "z": 3 },
+                "upperright": { "x": 1, "y": 2, "z": 3 }
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -410,14 +433,17 @@ TEST_CASE("Validate: ProjectionPlane/UpperLeft/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": { "x": 1, "y": 2, "z": 3 },
-              "upperLeft": "abc",
-              "upperRight": { "x": 1, "y": 2, "z": 3 }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": { "x": 1, "y": 2, "z": 3 },
+                "upperleft": "abc",
+                "upperright": { "x": 1, "y": 2, "z": 3 }
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -439,14 +465,17 @@ TEST_CASE("Validate: ProjectionPlane/UpperLeft/All/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": { "x": 1, "y": 2, "z": 3 },
-              "upperLeft": {},
-              "upperRight": { "x": 1, "y": 2, "z": 3 }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": { "x": 1, "y": 2, "z": 3 },
+                "upperleft": {},
+                "upperright": { "x": 1, "y": 2, "z": 3 }
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -468,17 +497,20 @@ TEST_CASE("Validate: ProjectionPlane/UpperLeft/X/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": { "x": 1, "y": 2, "z": 3 },
-              "upperLeft": {
-                "y": 2,
-                "z": 3
-              },
-              "upperRight": { "x": 1, "y": 2, "z": 3 }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": { "x": 1, "y": 2, "z": 3 },
+                "upperleft": {
+                  "y": 2,
+                  "z": 3
+                },
+                "upperright": { "x": 1, "y": 2, "z": 3 }
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -500,18 +532,21 @@ TEST_CASE("Validate: ProjectionPlane/UpperLeft/X/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": { "x": 1, "y": 2, "z": 3 },
-              "upperLeft": {
-                "x": "abc",
-                "y": 2,
-                "z": 3
-              },
-              "upperRight": { "x": 1, "y": 2, "z": 3 }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": { "x": 1, "y": 2, "z": 3 },
+                "upperleft": {
+                  "x": "abc",
+                  "y": 2,
+                  "z": 3
+                },
+                "upperright": { "x": 1, "y": 2, "z": 3 }
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -533,17 +568,20 @@ TEST_CASE("Validate: ProjectionPlane/UpperLeft/Y/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": { "x": 1, "y": 2, "z": 3 },
-              "upperLeft": {
-                "x": 1,
-                "z": 3
-              },
-              "upperRight": { "x": 1, "y": 2, "z": 3 }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": { "x": 1, "y": 2, "z": 3 },
+                "upperleft": {
+                  "x": 1,
+                  "z": 3
+                },
+                "upperright": { "x": 1, "y": 2, "z": 3 }
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -565,18 +603,21 @@ TEST_CASE("Validate: ProjectionPlane/UpperLeft/Y/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": { "x": 1, "y": 2, "z": 3 },
-              "upperLeft": {
-                "x": 1,
-                "y": "abc",
-                "z": 3
-              },
-              "upperRight": { "x": 1, "y": 2, "z": 3 }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": { "x": 1, "y": 2, "z": 3 },
+                "upperleft": {
+                  "x": 1,
+                  "y": "abc",
+                  "z": 3
+                },
+                "upperright": { "x": 1, "y": 2, "z": 3 }
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -598,17 +639,20 @@ TEST_CASE("Validate: ProjectionPlane/UpperLeft/Z/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": { "x": 1, "y": 2, "z": 3 },
-              "upperLeft": {
-                "x": 1,
-                "y": 2
-              },
-              "upperRight": { "x": 1, "y": 2, "z": 3 }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": { "x": 1, "y": 2, "z": 3 },
+                "upperleft": {
+                  "x": 1,
+                  "y": 2
+                },
+                "upperright": { "x": 1, "y": 2, "z": 3 }
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -630,18 +674,21 @@ TEST_CASE("Validate: ProjectionPlane/UpperLeft/Z/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": { "x": 1, "y": 2, "z": 3 },
-              "upperLeft": {
-                "x": 1,
-                "y": 2,
-                "z": "abc"
-              },
-              "upperRight": { "x": 1, "y": 2, "z": 3 }
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": { "x": 1, "y": 2, "z": 3 },
+                "upperleft": {
+                  "x": 1,
+                  "y": 2,
+                  "z": "abc"
+                },
+                "upperright": { "x": 1, "y": 2, "z": 3 }
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -663,14 +710,17 @@ TEST_CASE("Validate: ProjectionPlane/UpperRight/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": { "x": 1, "y": 2, "z": 3 },
-              "upperLeft": { "x": 1, "y": 2, "z": 3 },
-              "upperRight": "abc"
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": { "x": 1, "y": 2, "z": 3 },
+                "upperleft": { "x": 1, "y": 2, "z": 3 },
+                "upperright": "abc"
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -692,14 +742,17 @@ TEST_CASE("Validate: ProjectionPlane/UpperRight/All/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": { "x": 1, "y": 2, "z": 3 },
-              "upperLeft": { "x": 1, "y": 2, "z": 3 },
-              "upperRight": {}
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": { "x": 1, "y": 2, "z": 3 },
+                "upperleft": { "x": 1, "y": 2, "z": 3 },
+                "upperright": {}
+              }
             }
-          }
+          ]
         }
       ]
     }
@@ -721,17 +774,20 @@ TEST_CASE("Validate: ProjectionPlane/UpperRight/X/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": { "x": 1, "y": 2, "z": 3 },
-              "upperLeft": { "x": 1, "y": 2, "z": 3 },
-              "upperRight": {
-                "y": 2,
-                "z": 3
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": { "x": 1, "y": 2, "z": 3 },
+                "upperleft": { "x": 1, "y": 2, "z": 3 },
+                "upperright": {
+                  "y": 2,
+                  "z": 3
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -753,18 +809,21 @@ TEST_CASE("Validate: ProjectionPlane/UpperRight/X/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": { "x": 1, "y": 2, "z": 3 },
-              "upperLeft": { "x": 1, "y": 2, "z": 3 },
-              "upperRight": {
-                "x": "abc",
-                "y": 2,
-                "z": 3
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": { "x": 1, "y": 2, "z": 3 },
+                "upperleft": { "x": 1, "y": 2, "z": 3 },
+                "upperright": {
+                  "x": "abc",
+                  "y": 2,
+                  "z": 3
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -786,17 +845,20 @@ TEST_CASE("Validate: ProjectionPlane/UpperRight/Y/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": { "x": 1, "y": 2, "z": 3 },
-              "upperLeft": { "x": 1, "y": 2, "z": 3 },
-              "upperRight": {
-                "x": 1,
-                "z": 3
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": { "x": 1, "y": 2, "z": 3 },
+                "upperleft": { "x": 1, "y": 2, "z": 3 },
+                "upperright": {
+                  "x": 1,
+                  "z": 3
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -818,18 +880,21 @@ TEST_CASE("Validate: ProjectionPlane/UpperRight/Y/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": { "x": 1, "y": 2, "z": 3 },
-              "upperLeft": { "x": 1, "y": 2, "z": 3 },
-              "upperRight": {
-                "x": 1,
-                "y": "abc",
-                "z": 3
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": { "x": 1, "y": 2, "z": 3 },
+                "upperleft": { "x": 1, "y": 2, "z": 3 },
+                "upperright": {
+                  "x": 1,
+                  "y": "abc",
+                  "z": 3
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -851,17 +916,20 @@ TEST_CASE("Validate: ProjectionPlane/UpperRight/Z/Missing", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": { "x": 1, "y": 2, "z": 3 },
-              "upperLeft": { "x": 1, "y": 2, "z": 3 },
-              "upperRight": {
-                "x": 1,
-                "y": 2
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": { "x": 1, "y": 2, "z": 3 },
+                "upperleft": { "x": 1, "y": 2, "z": 3 },
+                "upperright": {
+                  "x": 1,
+                  "y": 2
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
@@ -883,18 +951,21 @@ TEST_CASE("Validate: ProjectionPlane/UpperRight/Z/Wrong Type", "[validate]") {
       "port": 123,
       "windows": [
         {
-          "viewport": {
-            "projection": {
-              "type": "ProjectionPlane",
-              "lowerleft": { "x": 1, "y": 2, "z": 3 },
-              "upperLeft": { "x": 1, "y": 2, "z": 3 },
-              "upperRight": {
-                "x": 1,
-                "y": 2,
-                "z": "abc"
+          "size": { "x": 640, "y": 480 },
+          "viewports": [
+            {
+              "projection": {
+                "type": "ProjectionPlane",
+                "lowerleft": { "x": 1, "y": 2, "z": 3 },
+                "upperleft": { "x": 1, "y": 2, "z": 3 },
+                "upperright": {
+                  "x": 1,
+                  "y": 2,
+                  "z": "abc"
+                }
               }
             }
-          }
+          ]
         }
       ]
     }
