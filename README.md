@@ -51,6 +51,7 @@ SGCT resolves its dependencies through [vcpkg](https://vcpkg.io) in manifest mod
 | `BUILD_SHARED_LIBS` | `OFF` | Build SGCT as a shared library |
 | `SGCT_BUILD_TESTS` | `ON` when SGCT is the top-level project, otherwise `OFF` | Build the unit tests |
 | `SGCT_BUILD_CALIBRATOR` | `ON` | Build the `calibrator` application that renders a test pattern for projector calibration |
+| `SGCT_BUILD_EXAMPLES` | `OFF` | Build the example applications in `examples/`; needs `-DVCPKG_MANIFEST_FEATURES=examples` |
 | `SGCT_TRACY_SUPPORT` | `OFF` | Enable [Tracy](https://github.com/wolfpld/tracy) profiling |
 | `SGCT_MEMORY_PROFILING` | `OFF` | Override `new`/`delete` for Tracy memory profiling; requires `SGCT_TRACY_SUPPORT` |
 | `SGCT_NDI_SUPPORT` | `OFF` | Windows only. Proprietary SDK, the result must not be redistributed |

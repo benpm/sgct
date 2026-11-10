@@ -1557,3 +1557,31 @@ TEST_CASE("Load Example: TextureMappedProjection", "[parse]") {
     CHECK(u.position->y == 0.f);
     CHECK(u.position->z == 0.f);
 }
+
+TEST_CASE("Load Example: Single Bloom", "[parse]") {
+    Cluster res = sgct::readConfig(std::string(BASE_PATH) + "/config/single_bloom.json");
+
+    REQUIRE(res.nodes.size() == 1);
+    REQUIRE(res.nodes[0].windows.size() == 1);
+    const Window& w = res.nodes[0].windows[0];
+    REQUIRE(w.bufferBitDepth.has_value());
+    CHECK(*w.bufferBitDepth == Window::ColorBitDepth::Depth16Float);
+    CHECK(!w.useFxaa.has_value());
+    CHECK(w.size->x == 1280);
+    CHECK(w.size->y == 720);
+    REQUIRE(w.viewports.size() == 1);
+    CHECK(std::holds_alternative<PlanarProjection>(w.viewports[0].projection));
+}
+
+TEST_CASE("Load Example: Single FXAA", "[parse]") {
+    Cluster res = sgct::readConfig(std::string(BASE_PATH) + "/config/single_fxaa.json");
+
+    REQUIRE(res.nodes.size() == 1);
+    REQUIRE(res.nodes[0].windows.size() == 1);
+    const Window& w = res.nodes[0].windows[0];
+    REQUIRE(w.useFxaa.has_value());
+    CHECK(*w.useFxaa == true);
+    CHECK(!w.bufferBitDepth.has_value());
+    REQUIRE(w.viewports.size() == 1);
+    CHECK(std::holds_alternative<PlanarProjection>(w.viewports[0].projection));
+}

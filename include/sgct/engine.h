@@ -210,14 +210,17 @@ public:
         /// This function is called after the draw stage but before the OpenGL buffer swap
         void (*postDraw)() = nullptr;
 
-        /// This function is called once per window and eye after the scene has been
-        /// rendered and before FXAA and the 2D rendering. It receives the window being
-        /// rendered, the frustum mode (eye), the texture containing the rendered frame,
-        /// and the size of that texture in pixels. The callback has to write the
-        /// processed image into the framebuffer that is bound when it is called, whose
-        /// viewport already covers the whole texture. Blending is disabled during the
-        /// call. If the callback needs its own framebuffers, it has to restore the
-        /// framebuffer binding and the viewport before returning
+        /// This function is called after the scene has been rendered and before FXAA
+        /// and the 2D rendering. It is called once per eye texture: once per window for
+        /// mono rendering and for side-by-side or top-bottom stereo (with
+        /// FrustumMode::StereoRight and a texture that already holds both eyes), and
+        /// once per eye for stereo modes that render each eye into its own texture. It
+        /// receives the window being rendered, the frustum mode, the texture containing
+        /// the rendered frame, and the size of that texture in pixels. The callback has
+        /// to write the processed image into the framebuffer that is bound when it is
+        /// called, whose viewport already covers the whole texture. Blending is disabled
+        /// during the call. If the callback needs its own framebuffers, it has to
+        /// restore the framebuffer binding and the viewport before returning
         PostProcessFunction postProcess = nullptr;
 
         /// This is called before all SGCT components will be destroyed. The same shared

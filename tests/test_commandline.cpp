@@ -154,6 +154,28 @@ TEST_CASE("CommandLine: Capture threads", "[commandline]") {
     }
 }
 
+TEST_CASE("CommandLine: Capture frame", "[commandline]") {
+    {
+        std::vector<std::string> args = {
+            "--capture-frame", "30", "--exit-after-frame", "32"
+        };
+        const Configuration config = parseArguments(args);
+        CHECK(config.captureFrame == 30u);
+        CHECK(config.exitAfterFrame == 32u);
+        CHECK(args.empty());
+    }
+    {
+        // Frame numbers are 1-based, so smaller values are clamped to the first frame
+        std::vector<std::string> args = {
+            "--capture-frame", "0", "--exit-after-frame", "-5"
+        };
+        const Configuration config = parseArguments(args);
+        CHECK(config.captureFrame == 1u);
+        CHECK(config.exitAfterFrame == 1u);
+        CHECK(args.empty());
+    }
+}
+
 TEST_CASE("CommandLine: Screenshot", "[commandline]") {
     std::vector<std::string> args = {
         "--screenshot-path", "some/path", "--screenshot-prefix", "prefix"
@@ -196,7 +218,8 @@ TEST_CASE("CommandLine: Unknown arguments are kept", "[commandline]") {
 TEST_CASE("CommandLine: Missing values", "[commandline]") {
     const std::vector<std::string> flags = {
         "--config", "-c", "--local", "-l", "--notify", "--number-capture-threads",
-        "--screenshot-path", "--screenshot-prefix", "--wait-timeout"
+        "--screenshot-path", "--screenshot-prefix", "--wait-timeout",
+        "--capture-frame", "--exit-after-frame"
     };
     for (const std::string& flag : flags) {
         // A flag that requires a value but is the last argument is ignored and kept
@@ -209,6 +232,8 @@ TEST_CASE("CommandLine: Missing values", "[commandline]") {
         CHECK(!config.screenshotPath.has_value());
         CHECK(!config.screenshotPrefix.has_value());
         CHECK(!config.waitTimeout.has_value());
+        CHECK(!config.captureFrame.has_value());
+        CHECK(!config.exitAfterFrame.has_value());
         const std::vector<std::string> expected = { "app", flag };
         CHECK(args == expected);
     }
@@ -234,6 +259,15 @@ TEST_CASE("CommandLine: Invalid numbers", "[commandline]") {
         CHECK(args.empty());
     }
     {
+        std::vector<std::string> args = {
+            "--capture-frame", "abc", "--exit-after-frame", "x"
+        };
+        const Configuration config = parseArguments(args);
+        CHECK(!config.captureFrame.has_value());
+        CHECK(!config.exitAfterFrame.has_value());
+        CHECK(args.empty());
+    }
+    {
         std::vector<std::string> args = { "--local", "99999999999999999999" };
         const Configuration config = parseArguments(args);
         CHECK(!config.nodeId.has_value());
@@ -243,12 +277,13 @@ TEST_CASE("CommandLine: Invalid numbers", "[commandline]") {
 
 TEST_CASE("CommandLine: Help message", "[commandline]") {
     const std::string msg = helpMessage();
-    constexpr std::array<std::string_view, 16> Flags = {
+    constexpr std::array<std::string_view, 18> Flags = {
         "--config", "--help", "--local", "--client", "--debug", "--firm-sync",
         "--loose-sync", "--ignore-sync", "--notify", "--screenshot-path",
         "--screenshot-prefix", "--add-node-name-in-screenshot",
         "--omit-node-name-in-screenshot", "--number-capture-threads",
-        "--print-wait-message", "--wait-timeout"
+        "--print-wait-message", "--wait-timeout", "--capture-frame",
+        "--exit-after-frame"
     };
     for (std::string_view flag : Flags) {
         CHECK(msg.find(flag) != std::string::npos);

@@ -28,10 +28,10 @@ The examples need an extra manifest feature and CMake option:
 ```sh
 cmake --preset linux-ninja-release -DSGCT_BUILD_EXAMPLES=ON -DVCPKG_MANIFEST_FEATURES=examples
 cmake --build --preset linux-ninja-release --target simplecube
-build/linux-ninja-release/bin/simplecube -config config/single.json
+build/linux-ninja-release/bin/simplecube --config config/single.json
 ```
 
-Every SGCT application takes `-config <file>` to select the cluster configuration. The
+Every SGCT application takes `--config <file>` (or `-c`) to select the cluster configuration. The
 example configurations live in `config/`; `config/single_bloom.json` uses a 16-bit float
 framebuffer, which the post-processing effects benefit from.
 
@@ -64,7 +64,7 @@ framebuffer, which the post-processing effects benefit from.
 `--exit-after-frame <n>` stops the application after `n` frames:
 
 ```sh
-build/linux-ninja-release/bin/simplecube -config config/single_bloom.json \
+build/linux-ninja-release/bin/simplecube --config config/single_bloom.json \
     --capture-frame 30 --exit-after-frame 32 --screenshot-path /tmp/shots
 ```
 
